@@ -1,0 +1,32 @@
+{
+  "name": "frontend",
+  "projectType": "application",
+  "sourceRoot": "apps/frontend/src",
+  "root": "apps/frontend",
+  "targets": {
+    "build": {
+      "executor": "@nx/next:build",
+      "outputs": ["{options.outputPath}"],
+      "options": {
+        "outputPath": "dist/apps/frontend",
+        "root": "apps/frontend",
+        "project": "apps/frontend/tsconfig.json"
+      }
+    },
+    "serve": {
+      "executor": "@nx/next:server",
+      "options": {
+        "dev": true,
+        "buildTarget": "frontend:build",
+        "port": 3101
+      }
+    },
+    "lint": {
+      "executor": "@nx/eslint:lint",
+      "options": {
+        "lintFilePatterns": ["apps/frontend/**/*.{ts,tsx,js,jsx}"]
+      }
+    }
+  },
+  "tags": []
+}
