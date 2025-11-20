@@ -2,7 +2,11 @@
   "name": "@tic-tac-toe/source",
   "version": "1.0.0",
   "license": "MIT",
-  "scripts": {},
+  "scripts": {
+    "prisma:generate": "prisma generate",
+    "prisma:migrate:dev": "prisma migrate dev",
+    "prisma:studio": "prisma studio"
+  },
   "private": true,
   "devDependencies": {
     "@eslint/compat": "^1.1.1",
@@ -56,6 +60,7 @@
     "@nestjs/platform-express": "^11.0.0",
     "@prisma/client": "^7.0.0",
     "axios": "^1.6.0",
+    "mysql2": "^3.15.3",
     "next": "~15.2.4",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
