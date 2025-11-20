@@ -20,7 +20,7 @@ const config: runtime.GetPrismaClientConfig = {
   "clientVersion": "7.0.0",
   "engineVersion": "0c19ccc313cf9911a90d99d2ac2eb0280c76c513",
   "activeProvider": "mysql",
-  "inlineSchema": "// This is your Prisma schema file,\n// learn more about it in the docs: https://pris.ly/d/prisma-schema\n\n// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?\n// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init\n\ngenerator client {\n  provider = \"prisma-client\"\n  output   = \"../prisma/generated/prisma\"\n}\n\ndatasource db {\n  provider = \"mysql\"\n}\n",
+  "inlineSchema": "// This is your Prisma schema file,\n// learn more about it in the docs: https://pris.ly/d/prisma-schema\n\n// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?\n// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init\n\ngenerator client {\n  provider = \"prisma-client\"\n  output   = \"../prisma/generated/prisma\"\n}\n\ndatasource db {\n  provider = \"mysql\"\n}\n\nenum AuthProvider {\n  GOOGLE\n  FACEBOOK\n  LINE\n  OKTA\n  AUTH0\n\n  @@map(\"auth_provider\")\n}\n\nenum AuthProviderType {\n  OAUTH2\n  OIDC\n\n  @@map(\"auth_provider_type\")\n}\n\nmodel User {\n  id        String   @id @default(cuid()) @map(\"id\")\n  createdAt DateTime @default(now()) @map(\"created_at\")\n  updatedAt DateTime @updatedAt @map(\"updated_at\")\n\n  // ข้อมูลพื้นฐาน\n  email    String? @unique @map(\"email\")\n  name     String? @map(\"name\")\n  lastName String? @map(\"last_name\")\n  picture  String? @map(\"picture\") // avatar จาก provider\n\n  // เอาไว้ future ใช้เก็บคะแนน\n  score           Int @default(0) @map(\"score\")\n  consecutiveWins Int @default(0) @map(\"consecutive_wins\")\n\n  accounts    Account[]    @relation(\"UserAccounts\")\n  sessions    Session[]    @relation(\"UserSessions\")\n  loginAudits LoginAudit[] @relation(\"UserLoginAudits\")\n\n  @@map(\"users\")\n}\n\nmodel Account {\n  id                String           @id @default(cuid()) @map(\"id\")\n  userId            String           @map(\"user_id\")\n  provider          AuthProvider     @map(\"provider\")\n  providerType      AuthProviderType @map(\"provider_type\")\n  providerAccountId String           @map(\"provider_account_id\")\n  email             String?          @map(\"email\")\n\n  // OAuth tokens\n  accessToken  String? @map(\"access_token\") @db.Text\n  refreshToken String? @map(\"refresh_token\") @db.Text\n  tokenType    String? @map(\"token_type\")\n  scope        String? @map(\"scope\")\n  idToken      String? @map(\"id_token\") @db.Text\n  expiresAt    Int?    @map(\"expires_at\") // epoch seconds\n\n  sessionState   String? @map(\"session_state\")\n  rawProfileJson String? @map(\"raw_profile_json\") @db.Text\n\n  user User @relation(\"UserAccounts\", fields: [userId], references: [id], onDelete: Cascade)\n\n  @@unique([provider, providerAccountId])\n  @@index([userId])\n  @@map(\"accounts\")\n}\n\nmodel Session {\n  id           String   @id @default(cuid()) @map(\"id\")\n  sessionToken String   @unique @map(\"session_token\")\n  userId       String   @map(\"user_id\")\n  createdAt    DateTime @default(now()) @map(\"created_at\")\n  expiresAt    DateTime @map(\"expires_at\")\n\n  user User @relation(\"UserSessions\", fields: [userId], references: [id], onDelete: Cascade)\n\n  @@index([userId])\n  @@map(\"sessions\")\n}\n\nmodel LoginAudit {\n  id        String        @id @default(cuid()) @map(\"id\")\n  userId    String?       @map(\"user_id\")\n  provider  AuthProvider? @map(\"provider\")\n  ipAddress String?       @map(\"ip_address\") @db.VarChar(64)\n  userAgent String?       @map(\"user_agent\") @db.Text\n  success   Boolean       @default(true) @map(\"success\")\n  createdAt DateTime      @default(now()) @map(\"created_at\")\n\n  user User? @relation(\"UserLoginAudits\", fields: [userId], references: [id])\n\n  @@index([userId])\n  @@map(\"login_audits\")\n}\n",
   "runtimeDataModel": {
     "models": {},
     "enums": {},
@@ -28,7 +28,7 @@ const config: runtime.GetPrismaClientConfig = {
   }
 }
 
-config.runtimeDataModel = JSON.parse("{\"models\":{},\"enums\":{},\"types\":{}}")
+config.runtimeDataModel = JSON.parse("{\"models\":{\"User\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"String\",\"dbName\":\"id\"},{\"name\":\"createdAt\",\"kind\":\"scalar\",\"type\":\"DateTime\",\"dbName\":\"created_at\"},{\"name\":\"updatedAt\",\"kind\":\"scalar\",\"type\":\"DateTime\",\"dbName\":\"updated_at\"},{\"name\":\"email\",\"kind\":\"scalar\",\"type\":\"String\",\"dbName\":\"email\"},{\"name\":\"name\",\"kind\":\"scalar\",\"type\":\"String\",\"dbName\":\"name\"},{\"name\":\"lastName\",\"kind\":\"scalar\",\"type\":\"String\",\"dbName\":\"last_name\"},{\"name\":\"picture\",\"kind\":\"scalar\",\"type\":\"String\",\"dbName\":\"picture\"},{\"name\":\"score\",\"kind\":\"scalar\",\"type\":\"Int\",\"dbName\":\"score\"},{\"name\":\"consecutiveWins\",\"kind\":\"scalar\",\"type\":\"Int\",\"dbName\":\"consecutive_wins\"},{\"name\":\"accounts\",\"kind\":\"object\",\"type\":\"Account\",\"relationName\":\"UserAccounts\"},{\"name\":\"sessions\",\"kind\":\"object\",\"type\":\"Session\",\"relationName\":\"UserSessions\"},{\"name\":\"loginAudits\",\"kind\":\"object\",\"type\":\"LoginAudit\",\"relationName\":\"UserLoginAudits\"}],\"dbName\":\"users\"},\"Account\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"String\",\"dbName\":\"id\"},{\"name\":\"userId\",\"kind\":\"scalar\",\"type\":\"String\",\"dbName\":\"user_id\"},{\"name\":\"provider\",\"kind\":\"enum\",\"type\":\"AuthProvider\",\"dbName\":\"provider\"},{\"name\":\"providerType\",\"kind\":\"enum\",\"type\":\"AuthProviderType\",\"dbName\":\"provider_type\"},{\"name\":\"providerAccountId\",\"kind\":\"scalar\",\"type\":\"String\",\"dbName\":\"provider_account_id\"},{\"name\":\"email\",\"kind\":\"scalar\",\"type\":\"String\",\"dbName\":\"email\"},{\"name\":\"accessToken\",\"kind\":\"scalar\",\"type\":\"String\",\"dbName\":\"access_token\"},{\"name\":\"refreshToken\",\"kind\":\"scalar\",\"type\":\"String\",\"dbName\":\"refresh_token\"},{\"name\":\"tokenType\",\"kind\":\"scalar\",\"type\":\"String\",\"dbName\":\"token_type\"},{\"name\":\"scope\",\"kind\":\"scalar\",\"type\":\"String\",\"dbName\":\"scope\"},{\"name\":\"idToken\",\"kind\":\"scalar\",\"type\":\"String\",\"dbName\":\"id_token\"},{\"name\":\"expiresAt\",\"kind\":\"scalar\",\"type\":\"Int\",\"dbName\":\"expires_at\"},{\"name\":\"sessionState\",\"kind\":\"scalar\",\"type\":\"String\",\"dbName\":\"session_state\"},{\"name\":\"rawProfileJson\",\"kind\":\"scalar\",\"type\":\"String\",\"dbName\":\"raw_profile_json\"},{\"name\":\"user\",\"kind\":\"object\",\"type\":\"User\",\"relationName\":\"UserAccounts\"}],\"dbName\":\"accounts\"},\"Session\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"String\",\"dbName\":\"id\"},{\"name\":\"sessionToken\",\"kind\":\"scalar\",\"type\":\"String\",\"dbName\":\"session_token\"},{\"name\":\"userId\",\"kind\":\"scalar\",\"type\":\"String\",\"dbName\":\"user_id\"},{\"name\":\"createdAt\",\"kind\":\"scalar\",\"type\":\"DateTime\",\"dbName\":\"created_at\"},{\"name\":\"expiresAt\",\"kind\":\"scalar\",\"type\":\"DateTime\",\"dbName\":\"expires_at\"},{\"name\":\"user\",\"kind\":\"object\",\"type\":\"User\",\"relationName\":\"UserSessions\"}],\"dbName\":\"sessions\"},\"LoginAudit\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"String\",\"dbName\":\"id\"},{\"name\":\"userId\",\"kind\":\"scalar\",\"type\":\"String\",\"dbName\":\"user_id\"},{\"name\":\"provider\",\"kind\":\"enum\",\"type\":\"AuthProvider\",\"dbName\":\"provider\"},{\"name\":\"ipAddress\",\"kind\":\"scalar\",\"type\":\"String\",\"dbName\":\"ip_address\"},{\"name\":\"userAgent\",\"kind\":\"scalar\",\"type\":\"String\",\"dbName\":\"user_agent\"},{\"name\":\"success\",\"kind\":\"scalar\",\"type\":\"Boolean\",\"dbName\":\"success\"},{\"name\":\"createdAt\",\"kind\":\"scalar\",\"type\":\"DateTime\",\"dbName\":\"created_at\"},{\"name\":\"user\",\"kind\":\"object\",\"type\":\"User\",\"relationName\":\"UserLoginAudits\"}],\"dbName\":\"login_audits\"}},\"enums\":{},\"types\":{}}")
 
 async function decodeBase64AsWasm(wasmBase64: string): Promise<WebAssembly.Module> {
   const { Buffer } = await import('node:buffer')
@@ -174,7 +174,45 @@ export interface PrismaClient<
     extArgs: ExtArgs
   }>>
 
-    
+      /**
+   * `prisma.user`: Exposes CRUD operations for the **User** model.
+    * Example usage:
+    * ```ts
+    * // Fetch zero or more Users
+    * const users = await prisma.user.findMany()
+    * ```
+    */
+  get user(): Prisma.UserDelegate<ExtArgs, { omit: OmitOpts }>;
+
+  /**
+   * `prisma.account`: Exposes CRUD operations for the **Account** model.
+    * Example usage:
+    * ```ts
+    * // Fetch zero or more Accounts
+    * const accounts = await prisma.account.findMany()
+    * ```
+    */
+  get account(): Prisma.AccountDelegate<ExtArgs, { omit: OmitOpts }>;
+
+  /**
+   * `prisma.session`: Exposes CRUD operations for the **Session** model.
+    * Example usage:
+    * ```ts
+    * // Fetch zero or more Sessions
+    * const sessions = await prisma.session.findMany()
+    * ```
+    */
+  get session(): Prisma.SessionDelegate<ExtArgs, { omit: OmitOpts }>;
+
+  /**
+   * `prisma.loginAudit`: Exposes CRUD operations for the **LoginAudit** model.
+    * Example usage:
+    * ```ts
+    * // Fetch zero or more LoginAudits
+    * const loginAudits = await prisma.loginAudit.findMany()
+    * ```
+    */
+  get loginAudit(): Prisma.LoginAuditDelegate<ExtArgs, { omit: OmitOpts }>;
 }
 
 export function getPrismaClientClass(): PrismaClientConstructor {

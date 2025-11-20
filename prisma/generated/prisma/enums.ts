@@ -9,7 +9,20 @@
 * 🟢 You can import this file directly.
 */
 
+export const AuthProvider = {
+  GOOGLE: 'GOOGLE',
+  FACEBOOK: 'FACEBOOK',
+  LINE: 'LINE',
+  OKTA: 'OKTA',
+  AUTH0: 'AUTH0'
+} as const
+
+export type AuthProvider = (typeof AuthProvider)[keyof typeof AuthProvider]
 
 
-// This file is empty because there are no enums in the schema.
-export {}
+export const AuthProviderType = {
+  OAUTH2: 'OAUTH2',
+  OIDC: 'OIDC'
+} as const
+
+export type AuthProviderType = (typeof AuthProviderType)[keyof typeof AuthProviderType]

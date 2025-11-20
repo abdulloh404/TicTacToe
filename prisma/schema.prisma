@@ -12,3 +12,96 @@ generator client {
 datasource db {
   provider = "mysql"
 }
+
+enum AuthProvider {
+  GOOGLE
+  FACEBOOK
+  LINE
+  OKTA
+  AUTH0
+
+  @@map("auth_provider")
+}
+
+enum AuthProviderType {
+  OAUTH2
+  OIDC
+
+  @@map("auth_provider_type")
+}
+
+model User {
+  id        String   @id @default(cuid()) @map("id")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // ข้อมูลพื้นฐาน
+  email    String? @unique @map("email")
+  name     String? @map("name")
+  lastName String? @map("last_name")
+  picture  String? @map("picture") // avatar จาก provider
+
+  // เอาไว้ future ใช้เก็บคะแนน
+  score           Int @default(0) @map("score")
+  consecutiveWins Int @default(0) @map("consecutive_wins")
+
+  accounts    Account[]    @relation("UserAccounts")
+  sessions    Session[]    @relation("UserSessions")
+  loginAudits LoginAudit[] @relation("UserLoginAudits")
+
+  @@map("users")
+}
+
+model Account {
+  id                String           @id @default(cuid()) @map("id")
+  userId            String           @map("user_id")
+  provider          AuthProvider     @map("provider")
+  providerType      AuthProviderType @map("provider_type")
+  providerAccountId String           @map("provider_account_id")
+  email             String?          @map("email")
+
+  // OAuth tokens
+  accessToken  String? @map("access_token") @db.Text
+  refreshToken String? @map("refresh_token") @db.Text
+  tokenType    String? @map("token_type")
+  scope        String? @map("scope")
+  idToken      String? @map("id_token") @db.Text
+  expiresAt    Int?    @map("expires_at") // epoch seconds
+
+  sessionState   String? @map("session_state")
+  rawProfileJson String? @map("raw_profile_json") @db.Text
+
+  user User @relation("UserAccounts", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@index([userId])
+  @@map("accounts")
+}
+
+model Session {
+  id           String   @id @default(cuid()) @map("id")
+  sessionToken String   @unique @map("session_token")
+  userId       String   @map("user_id")
+  createdAt    DateTime @default(now()) @map("created_at")
+  expiresAt    DateTime @map("expires_at")
+
+  user User @relation("UserSessions", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("sessions")
+}
+
+model LoginAudit {
+  id        String        @id @default(cuid()) @map("id")
+  userId    String?       @map("user_id")
+  provider  AuthProvider? @map("provider")
+  ipAddress String?       @map("ip_address") @db.VarChar(64)
+  userAgent String?       @map("user_agent") @db.Text
+  success   Boolean       @default(true) @map("success")
+  createdAt DateTime      @default(now()) @map("created_at")
+
+  user User? @relation("UserLoginAudits", fields: [userId], references: [id])
+
+  @@index([userId])
+  @@map("login_audits")
+}
