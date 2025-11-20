@@ -7,12 +7,6 @@
       "path": "./apps/frontend"
     },
     {
-      "path": "./apps/backend/"
-    },
-    {
-      "path": "./apps/backend-e2e"
-    },
-    {
       "path": "./apps/backend"
     },
     {

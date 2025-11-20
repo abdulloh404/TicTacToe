@@ -1,29 +1,31 @@
 {
+  "compileOnSave": false,
   "compilerOptions": {
-    "composite": true,
-    "declarationMap": true,
-    "emitDeclarationOnly": true,
+    "target": "es2022",
+    "lib": ["es2022", "dom"],
+    "module": "Node16",
+    "moduleResolution": "Node16",
+    "emitDecoratorMetadata": true,
+    "experimentalDecorators": true,
     "importHelpers": true,
     "isolatedModules": true,
-    "lib": ["es2022", "dom"],
-    "module": "commonjs",
-    "moduleResolution": "node",
+    "declarationMap": true,
+    "declaration": true,
     "noEmitOnError": true,
+    "composite": true,
     "noFallthroughCasesInSwitch": true,
     "noImplicitOverride": true,
     "noImplicitReturns": true,
     "noUnusedLocals": true,
     "skipLibCheck": true,
     "strict": true,
-    "target": "es2022",
-    "emitDecoratorMetadata": true,
-    "experimentalDecorators": true,
-    "declaration": true,
     "rootDir": ".",
     "baseUrl": ".",
-    "typeRoots": ["./node_modules/@types", "./types"]
+    "typeRoots": ["./node_modules/@types", "./types"],
+    "paths": {
+      "@prisma": ["libs/prisma/src/index"]
+    }
   },
-
-  "include": ["src/**/*.ts", "libs/**/**/*.ts", "packages/**/**/*.ts"],
-  "exclude": ["node_modules", "tmp", "dist", "build", "prisma"]
+  "include": ["src/**/*.ts", "libs/**/**/*.ts", "scripts/*.ts"],
+  "exclude": ["node_modules", "tmp", "dist", "build", "scripts", "prisma"]
 }
