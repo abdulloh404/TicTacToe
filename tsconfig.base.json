@@ -14,6 +14,7 @@
     "noEmitOnError": true,
     "composite": true,
     "noFallthroughCasesInSwitch": true,
+    "esModuleInterop": true,
     "noImplicitOverride": true,
     "noImplicitReturns": true,
     "noUnusedLocals": true,
