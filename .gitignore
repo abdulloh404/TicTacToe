@@ -47,3 +47,5 @@ Thumbs.db
 .next
 out
 /generated/prisma
+
+/generated/prisma

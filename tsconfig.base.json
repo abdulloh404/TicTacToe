@@ -3,8 +3,8 @@
   "compilerOptions": {
     "target": "es2022",
     "lib": ["es2022", "dom"],
-    "module": "Node16",
-    "moduleResolution": "Node16",
+    "module": "commonjs",
+    "moduleResolution": "nodenext",
     "emitDecoratorMetadata": true,
     "experimentalDecorators": true,
     "importHelpers": true,
@@ -24,7 +24,8 @@
     "baseUrl": ".",
     "typeRoots": ["./node_modules/@types", "./types"],
     "paths": {
-      "@prisma": ["libs/prisma/src/index"]
+      "@tic-tac-toe/*": ["libs/*/src/index"],
+      "@tic-tac-toe/prisma": ["libs/prisma/src/index"]
     }
   },
   "include": ["src/**/*.ts", "libs/**/**/*.ts", "scripts/*.ts"],
