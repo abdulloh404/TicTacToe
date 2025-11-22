@@ -86,7 +86,7 @@ export default function Authenticate() {
             </span>
           </button>
 
-          <div className={styles.divider}>
+          {/* <div className={styles.divider}>
             <span>or</span>
           </div>
 
@@ -126,7 +126,7 @@ export default function Authenticate() {
             <span className={styles.buttonLabel}>
               {isLoading('auth0') ? 'Connecting…' : 'Continue with Auth0'}
             </span>
-          </button>
+          </button> */}
         </div>
 
         <p className={styles.footer}>
