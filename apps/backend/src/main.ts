@@ -1,13 +1,18 @@
-import { json, urlencoded } from 'express';
+import { API_VERSION, GLOBAL_PREFIX } from '@tic-tac-toe/constant';
 import { AppModule } from './app/app.module';
+import { json, urlencoded } from 'express';
 import { Logger, RequestMethod } from '@nestjs/common';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { NestFactory } from '@nestjs/core';
-import { API_VERSION } from '@tic-tac-toe/constant';
+import cookieParser from 'cookie-parser';
 
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
+
   app.set('query parser', 'extended');
+  app.use(cookieParser());
+  app.use(json({ limit: '50mb' }));
+  app.use(urlencoded({ extended: true, limit: '50mb' }));
 
   // main.ts (NestJS)
   app.enableCors({
@@ -23,10 +28,8 @@ async function bootstrap() {
     exposedHeaders: ['Content-Length', 'Content-Type'],
   });
 
-  app.use(json({ limit: '50mb' }));
-  app.use(urlencoded({ extended: true, limit: '50mb' }));
+  const API_PREFIX = `${GLOBAL_PREFIX}/${API_VERSION}`;
 
-  const API_PREFIX = `api/${API_VERSION}`;
   app.setGlobalPrefix(API_PREFIX, {
     exclude: [{ path: 'public/(.*)', method: RequestMethod.GET }],
   });

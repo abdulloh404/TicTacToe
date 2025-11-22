@@ -1,10 +1,12 @@
 {
   "files.exclude": {
     "**/.git": false,
-    "**/.svn": true,
-    "**/.hg": true,
+    "**/.svn": false,
+    "**/.hg": false,
     "**/.DS_Store": true,
-    "**/Thumbs.db": true
+    "**/Thumbs.db": true,
+    "**/tmp": false
   },
-  "explorerExclude.backup": {}
+  "explorerExclude.backup": {},
+  "nxConsole.generateAiAgentRules": true
 }

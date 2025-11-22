@@ -7,12 +7,15 @@ import Image from 'next/image';
 export default function Authenticate() {
   const [loadingProvider, setLoadingProvider] = useState<string | null>(null);
 
+  const API_BASE = process.env.NEXT_PUBLIC_API_URL;
+
   const handleLogin = (provider: string) => {
+    console.log(API_BASE);
+
     if (loadingProvider) return;
     setLoadingProvider(provider);
-
-    console.log('Login with', provider);
-    setTimeout(() => setLoadingProvider(null), 600);
+    const redirectUrl = `${window.location.origin}/dashboard`;
+    window.location.href = `${API_BASE}/api/v1/auth/${provider}/login?redirect=${redirectUrl}`;
   };
 
   const isLoading = (provider: string) => loadingProvider === provider;
