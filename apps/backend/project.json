@@ -11,7 +11,14 @@
       "options": {
         "outputPath": "dist/apps/backend",
         "main": "apps/backend/src/main.ts",
-        "tsConfig": "apps/backend/tsconfig.app.json"
+        "tsConfig": "apps/backend/tsconfig.app.json",
+        "assets": [
+          {
+            "input": "apps/backend/assets",
+            "glob": "**/*",
+            "output": "assets"
+          }
+        ]
       }
     },
     "serve": {

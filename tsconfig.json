@@ -8,9 +8,6 @@
     },
     {
       "path": "./apps/backend"
-    },
-    {
-      "path": "./libs/prisma"
     }
   ]
 }

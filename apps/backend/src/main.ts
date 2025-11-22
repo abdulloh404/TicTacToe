@@ -3,6 +3,7 @@ import { AppModule } from './app/app.module';
 import { Logger, RequestMethod } from '@nestjs/common';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { NestFactory } from '@nestjs/core';
+import { API_VERSION } from '@tic-tac-toe/constant';
 
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
@@ -25,7 +26,7 @@ async function bootstrap() {
   app.use(json({ limit: '50mb' }));
   app.use(urlencoded({ extended: true, limit: '50mb' }));
 
-  const API_PREFIX = 'v1';
+  const API_PREFIX = `api/${API_VERSION}`;
   app.setGlobalPrefix(API_PREFIX, {
     exclude: [{ path: 'public/(.*)', method: RequestMethod.GET }],
   });

@@ -15,14 +15,15 @@
     "@nestjs/schematics": "^11.0.0",
     "@nestjs/testing": "^11.0.0",
     "@next/eslint-plugin-next": "^15.2.4",
-    "@nx/eslint": "22.0.4",
-    "@nx/eslint-plugin": "22.0.4",
-    "@nx/js": "22.0.4",
-    "@nx/nest": "^22.0.4",
-    "@nx/next": "^22.0.4",
-    "@nx/node": "22.0.4",
-    "@nx/web": "22.0.4",
-    "@nx/webpack": "22.0.4",
+    "@nx/eslint": "21.2.0",
+    "@nx/eslint-plugin": "21.2.0",
+    "@nx/jest": "21.2.0",
+    "@nx/js": "21.2.0",
+    "@nx/nest": "21.2.0",
+    "@nx/next": "21.2.0",
+    "@nx/node": "21.2.0",
+    "@nx/web": "21.2.0",
+    "@nx/webpack": "21.2.0",
     "@swc-node/register": "~1.9.1",
     "@swc/cli": "~0.6.0",
     "@swc/core": "~1.5.7",
@@ -39,9 +40,9 @@
     "eslint-plugin-react": "7.35.0",
     "eslint-plugin-react-hooks": "5.0.0",
     "jsonc-eslint-parser": "^2.1.0",
-    "nx": "22.0.4",
+    "nx": "21.2.0",
     "prettier": "^2.6.2",
-    "prisma": "^7.0.0",
+    "prisma": "^6.10.1",
     "sass": "1.62.1",
     "tslib": "^2.3.0",
     "typescript": "~5.9.2",
@@ -49,7 +50,6 @@
     "webpack-cli": "^5.1.4"
   },
   "workspaces": [
-    "libs/prisma",
     "apps/backend",
     "apps/frontend"
   ],
@@ -57,7 +57,7 @@
     "@nestjs/common": "^11.0.0",
     "@nestjs/core": "^11.0.0",
     "@nestjs/platform-express": "^11.0.0",
-    "@prisma/client": "^7.0.0",
+    "@prisma/client": "^6.10.1",
     "axios": "^1.6.0",
     "lint-staged": "^16.2.7",
     "mysql2": "^3.15.3",
@@ -66,8 +66,5 @@
     "react-dom": "^19.0.0",
     "reflect-metadata": "^0.1.13",
     "rxjs": "^7.8.0"
-  },
-  "lint-staged": {
-    "**/*.{ts,js, cjs,json,css,scss,md}": "prettier --write"
   }
 }

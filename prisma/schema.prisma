@@ -5,12 +5,14 @@
 // Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
 
 generator client {
-  provider = "prisma-client"
-  output   = "../prisma/generated/prisma"
+  provider = "prisma-client-js"
+  // output       = "../libs/prisma/src/generated/prisma"
+  // moduleFormat = "cjs"
 }
 
 datasource db {
   provider = "mysql"
+  url      = env("DATABASE_URL")
 }
 
 enum AuthProvider {

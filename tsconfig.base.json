@@ -3,7 +3,7 @@
   "compilerOptions": {
     "target": "es2022",
     "lib": ["es2022", "dom"],
-    "module": "commonjs",
+    "module": "nodenext",
     "moduleResolution": "nodenext",
     "emitDecoratorMetadata": true,
     "experimentalDecorators": true,
@@ -14,7 +14,6 @@
     "noEmitOnError": true,
     "composite": true,
     "noFallthroughCasesInSwitch": true,
-    "esModuleInterop": true,
     "noImplicitOverride": true,
     "noImplicitReturns": true,
     "noUnusedLocals": true,
@@ -24,10 +23,11 @@
     "baseUrl": ".",
     "typeRoots": ["./node_modules/@types", "./types"],
     "paths": {
-      "@tic-tac-toe/*": ["libs/*/src/index"],
-      "@tic-tac-toe/prisma": ["libs/prisma/src/index"]
+      "@tic-tac-toe/*": ["./libs/*/src/index"],
+      "@tic-tac-toe/constant": ["libs/constant/src/index.ts"],
+      "@tic-tac-toe/prisma": ["libs/prisma/src/index.ts"]
     }
   },
-  "include": ["src/**/*.ts", "libs/**/**/*.ts", "scripts/*.ts"],
+  "include": ["src/**/*.ts", "libs/**/**/*.ts"],
   "exclude": ["node_modules", "tmp", "dist", "build", "scripts", "prisma"]
 }
