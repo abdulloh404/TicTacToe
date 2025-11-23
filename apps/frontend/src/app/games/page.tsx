@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import styles from './games.module.scss';
 import { AppShell } from '../components/AppShell';
 
@@ -132,6 +132,9 @@ export default function GamesPage() {
 
   const isGameOver = status !== 'playing';
 
+  // เก็บค่า status รอบก่อน เพื่อเช็ค transition playing -> win/lose/draw
+  const prevStatusRef = useRef<GameStatus>('playing');
+
   // โหลด stats จาก backend ตอนเข้าเพจ
   useEffect(() => {
     if (!API_BASE) return;
@@ -183,7 +186,6 @@ export default function GamesPage() {
       setBoard(nextBoard);
       setStatus('win');
       setHighlightLine(line);
-      setLocalStats((prev) => ({ ...prev, wins: prev.wins + 1 }));
       return;
     }
 
@@ -192,7 +194,6 @@ export default function GamesPage() {
       setBoard(nextBoard);
       setStatus('draw');
       setHighlightLine(null);
-      setLocalStats((prev) => ({ ...prev, draws: prev.draws + 1 }));
       return;
     }
 
@@ -240,7 +241,6 @@ export default function GamesPage() {
         if (winner === 'O') {
           setStatus('lose');
           setHighlightLine(line);
-          setLocalStats((prev) => ({ ...prev, losses: prev.losses + 1 }));
           setCurrentPlayer('X');
           return nextBoard;
         }
@@ -249,7 +249,6 @@ export default function GamesPage() {
         if (isFull) {
           setStatus('draw');
           setHighlightLine(null);
-          setLocalStats((prev) => ({ ...prev, draws: prev.draws + 1 }));
           setCurrentPlayer('X');
           return nextBoard;
         }
@@ -262,6 +261,26 @@ export default function GamesPage() {
 
     return () => clearTimeout(timeout);
   }, [currentPlayer, status, hasFirstPlayer, coinPhase]);
+
+  // นับผลเกมลง Session scoreboard จากการเปลี่ยน status
+  useEffect(() => {
+    const prev = prevStatusRef.current;
+
+    const prevWasPlaying = prev === 'playing';
+    const nowIsFinal =
+      status === 'win' || status === 'lose' || status === 'draw';
+
+    // นับเฉพาะจังหวะที่ transition จาก playing -> final เท่านั้น
+    if (prevWasPlaying && nowIsFinal) {
+      setLocalStats((current) => ({
+        wins: current.wins + (status === 'win' ? 1 : 0),
+        losses: current.losses + (status === 'lose' ? 1 : 0),
+        draws: current.draws + (status === 'draw' ? 1 : 0),
+      }));
+    }
+
+    prevStatusRef.current = status;
+  }, [status]);
 
   // ทอยเหรียญเลือกคนเดินก่อน
   const handleStartGame = () => {
