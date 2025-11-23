@@ -5,11 +5,31 @@ import styles from './games.module.scss';
 import Link from 'next/link';
 import Image from 'next/image';
 
+const API_BASE = process.env.NEXT_PUBLIC_API_URL;
+
+// ฝั่ง frontend
 type Player = 'X' | 'O';
 type CellValue = Player | null;
-
 type GameStatus = 'playing' | 'win' | 'lose' | 'draw';
 type CoinPhase = 'idle' | 'flipping' | 'result';
+
+// แบบเดียวกับ DTO ฝั่ง backend
+type ServerResult = 'WIN' | 'LOSS' | 'DRAW';
+type ServerPlayer = 'HUMAN' | 'BOT';
+
+type MoveDto = {
+  moveOrder: number;
+  player: ServerPlayer;
+  position: number; // 0-8
+};
+
+type ServerStats = {
+  score: number;
+  currentWinStreak: number;
+  totalWins: number;
+  totalLosses: number;
+  totalDraws: number;
+};
 
 const winningLines: number[][] = [
   [0, 1, 2],
@@ -85,7 +105,17 @@ export default function GamesPage() {
   const [currentPlayer, setCurrentPlayer] = useState<Player>('X'); // X = คน, O = bot
   const [status, setStatus] = useState<GameStatus>('playing');
   const [highlightLine, setHighlightLine] = useState<number[] | null>(null);
-  const [stats, setStats] = useState({ wins: 0, losses: 0, draws: 0 });
+
+  // local stats (session เท่านั้น)
+  const [localStats, setLocalStats] = useState({
+    wins: 0,
+    losses: 0,
+    draws: 0,
+  });
+
+  // server stats (จาก backend)
+  const [serverStats, setServerStats] = useState<ServerStats | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // coin toss state
   const [hasFirstPlayer, setHasFirstPlayer] = useState(false);
@@ -95,7 +125,33 @@ export default function GamesPage() {
   // overlay win/lose/draw
   const [showResultOverlay, setShowResultOverlay] = useState(false);
 
+  // ลำดับการเดิน + ฝั่งที่เริ่ม (สำหรับส่งเข้า backend)
+  const [moves, setMoves] = useState<MoveDto[]>([]);
+  const [startingPlayer, setStartingPlayer] = useState<ServerPlayer | null>(
+    null
+  );
+
   const isGameOver = status !== 'playing';
+
+  // โหลด stats จาก backend ตอนเข้าเพจ
+  useEffect(() => {
+    if (!API_BASE) return;
+
+    const fetchStats = async () => {
+      try {
+        const res = await fetch(`${API_BASE}/api/v1/tictactoe/me`, {
+          credentials: 'include',
+        });
+        if (!res.ok) return;
+        const json = await res.json();
+        setServerStats(json.response);
+      } catch (err) {
+        console.error('Failed to load tictactoe stats', err);
+      }
+    };
+
+    fetchStats();
+  }, []);
 
   const handleCellClick = (index: number) => {
     if (isGameOver) return;
@@ -106,13 +162,23 @@ export default function GamesPage() {
     const nextBoard = [...board];
     nextBoard[index] = 'X';
 
+    // บันทึก move ของคน
+    setMoves((prev) => [
+      ...prev,
+      {
+        moveOrder: prev.length + 1,
+        player: 'HUMAN',
+        position: index,
+      },
+    ]);
+
     const { winner, line } = evaluateBoard(nextBoard);
 
     if (winner === 'X') {
       setBoard(nextBoard);
       setStatus('win');
       setHighlightLine(line);
-      setStats((prev) => ({ ...prev, wins: prev.wins + 1 }));
+      setLocalStats((prev) => ({ ...prev, wins: prev.wins + 1 }));
       return;
     }
 
@@ -121,7 +187,7 @@ export default function GamesPage() {
       setBoard(nextBoard);
       setStatus('draw');
       setHighlightLine(null);
-      setStats((prev) => ({ ...prev, draws: prev.draws + 1 }));
+      setLocalStats((prev) => ({ ...prev, draws: prev.draws + 1 }));
       return;
     }
 
@@ -146,12 +212,22 @@ export default function GamesPage() {
         const nextBoard = [...prevBoard];
         nextBoard[index] = 'O';
 
+        // บันทึก move ของบอท
+        setMoves((prevMoves) => [
+          ...prevMoves,
+          {
+            moveOrder: prevMoves.length + 1,
+            player: 'BOT',
+            position: index,
+          },
+        ]);
+
         const { winner, line } = evaluateBoard(nextBoard);
 
         if (winner === 'O') {
           setStatus('lose');
           setHighlightLine(line);
-          setStats((prev) => ({ ...prev, losses: prev.losses + 1 }));
+          setLocalStats((prev) => ({ ...prev, losses: prev.losses + 1 }));
           setCurrentPlayer('X');
           return nextBoard;
         }
@@ -160,7 +236,7 @@ export default function GamesPage() {
         if (isFull) {
           setStatus('draw');
           setHighlightLine(null);
-          setStats((prev) => ({ ...prev, draws: prev.draws + 1 }));
+          setLocalStats((prev) => ({ ...prev, draws: prev.draws + 1 }));
           setCurrentPlayer('X');
           return nextBoard;
         }
@@ -176,11 +252,14 @@ export default function GamesPage() {
 
   // ทอยเหรียญเลือกคนเดินก่อน
   const handleStartGame = () => {
+    // รีเซ็ตกระดาน + state เกม
     setBoard(Array(9).fill(null));
     setStatus('playing');
     setHighlightLine(null);
     setHasFirstPlayer(false);
     setCoinWinner(null);
+    setMoves([]);
+    setStartingPlayer(null);
 
     const flipDuration = 900;
     const resultDuration = 900;
@@ -193,8 +272,11 @@ export default function GamesPage() {
       setCoinPhase('result');
 
       setTimeout(() => {
+        const firstPlayer: ServerPlayer = winner === 'human' ? 'HUMAN' : 'BOT';
+
         setHasFirstPlayer(true);
-        setCurrentPlayer(winner === 'human' ? 'X' : 'O');
+        setStartingPlayer(firstPlayer);
+        setCurrentPlayer(firstPlayer === 'HUMAN' ? 'X' : 'O');
         setCoinPhase('idle');
         setCoinWinner(null);
       }, resultDuration);
@@ -216,10 +298,61 @@ export default function GamesPage() {
     return () => clearTimeout(timeout);
   }, [status]);
 
+  // เมื่อเกมจบ → ส่ง result + moves เข้า backend
+  useEffect(() => {
+    const isFinal = status === 'win' || status === 'lose' || status === 'draw';
+
+    if (!isFinal) return;
+    if (!startingPlayer) return;
+    if (!API_BASE) return;
+    if (moves.length === 0) return;
+
+    const mapResult = (s: GameStatus): ServerResult => {
+      if (s === 'win') return 'WIN';
+      if (s === 'lose') return 'LOSS';
+      return 'DRAW';
+    };
+
+    const submit = async () => {
+      try {
+        setIsSubmitting(true);
+
+        const res = await fetch(`${API_BASE}/api/v1/tictactoe/games`, {
+          method: 'POST',
+          credentials: 'include',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            result: mapResult(status),
+            startingPlayer,
+            moves,
+          }),
+        });
+
+        if (!res.ok) {
+          console.error('Failed to record game', res.status);
+          return;
+        }
+
+        const json = await res.json();
+        if (json?.response?.stats) {
+          setServerStats(json.response.stats);
+        }
+      } catch (err) {
+        console.error('Error recording game', err);
+      } finally {
+        setIsSubmitting(false);
+      }
+    };
+
+    submit();
+  }, [status, startingPlayer, moves]);
+
   const renderStatusText = () => {
     if (status === 'win') return 'You win!';
     if (status === 'lose') return 'You lose!';
-    if (status === 'draw') return 'It&apos;s a draw';
+    if (status === 'draw') return 'It’s a draw';
 
     if (!hasFirstPlayer) return 'Tap "Start game" to flip the coin';
 
@@ -323,6 +456,9 @@ export default function GamesPage() {
                 }`}
               >
                 {renderStatusText()}
+                {isSubmitting && (
+                  <span className={styles.statusSync}> · syncing…</span>
+                )}
               </span>
             </div>
 
@@ -382,37 +518,43 @@ export default function GamesPage() {
 
           <section className={styles.sidebarSection}>
             <div className={styles.card}>
-              <h2 className={styles.cardTitle}>Scoreboard</h2>
+              <h2 className={styles.cardTitle}>Session scoreboard</h2>
               <p className={styles.cardSubtitle}>
-                Local scores for this session.
+                Local scores for this browser session.
               </p>
 
               <div className={styles.scoreGrid}>
                 <div className={styles.scoreItem}>
                   <span className={styles.scoreLabel}>Wins</span>
-                  <span className={styles.scoreValue}>{stats.wins}</span>
+                  <span className={styles.scoreValue}>{localStats.wins}</span>
                 </div>
                 <div className={styles.scoreItem}>
                   <span className={styles.scoreLabel}>Losses</span>
-                  <span className={styles.scoreValue}>{stats.losses}</span>
+                  <span className={styles.scoreValue}>{localStats.losses}</span>
                 </div>
                 <div className={styles.scoreItem}>
                   <span className={styles.scoreLabel}>Draws</span>
-                  <span className={styles.scoreValue}>{stats.draws}</span>
+                  <span className={styles.scoreValue}>{localStats.draws}</span>
                 </div>
               </div>
             </div>
 
             <div className={styles.cardMuted}>
-              <h3 className={styles.tipTitle}>How it works</h3>
-              <ul className={styles.tipList}>
-                <li>You are always X, the bot is O.</li>
-                <li>Take turns placing marks on the 3×3 grid.</li>
-                <li>
-                  First to get 3 in a row (line, column or diagonal) wins.
-                </li>
-                <li>If the board is full and nobody wins, it&apos;s a draw.</li>
-              </ul>
+              <h3 className={styles.tipTitle}>Your global stats</h3>
+              {serverStats ? (
+                <ul className={styles.tipList}>
+                  <li>Score: {serverStats.score}</li>
+                  <li>Current win streak: {serverStats.currentWinStreak}</li>
+                  <li>
+                    W / L / D: {serverStats.totalWins} /{' '}
+                    {serverStats.totalLosses} / {serverStats.totalDraws}
+                  </li>
+                </ul>
+              ) : (
+                <p className={styles.tipText}>
+                  Play a game to start tracking your score.
+                </p>
+              )}
             </div>
           </section>
         </main>

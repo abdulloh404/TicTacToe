@@ -5,7 +5,7 @@
   display: flex;
   align-items: stretch;
   justify-content: center;
-  background: radial-gradient(circle at top left, #ede9fe, #f9fafb 55%);
+  // background: radial-gradient(circle at top left, #ede9fe, #f9fafb 55%);
   font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI',
     sans-serif;
 }
@@ -101,7 +101,7 @@
 .navItemActive {
   background: linear-gradient(135deg, #6366f1, #a855f7);
   color: #ffffff;
-  box-shadow: 0 14px 30px rgba(79, 70, 229, 0.55);
+  // box-shadow: 0 14px 30px rgba(79, 70, 229, 0.55);
 }
 
 .navItemActive .navItemBullet {
@@ -315,17 +315,6 @@
 
 /* Primary card */
 
-.primaryCard {
-  border-radius: 1rem;
-  padding: 1.4rem 1.5rem;
-  background: radial-gradient(circle at top left, #eef2ff, #ffffff);
-  border: 1px solid rgba(129, 140, 248, 0.35);
-  box-shadow: 0 18px 40px rgba(79, 70, 229, 0.25);
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-}
-
 .cardTitle {
   margin: 0;
   font-size: 1.02rem;
@@ -352,19 +341,17 @@
   font-weight: 500;
   text-decoration: none;
   cursor: pointer;
-  box-shadow: 0 16px 35px rgba(79, 70, 229, 0.6);
+  // box-shadow: 0 16px 35px rgba(79, 70, 229, 0.6);
   transition: transform 0.08s ease, box-shadow 0.16s ease, filter 0.16s ease;
 }
 
 .primaryButton:hover {
   transform: translateY(-1px);
-  box-shadow: 0 18px 40px rgba(88, 80, 236, 0.7);
   filter: brightness(1.03);
 }
 
 .primaryButton:active {
   transform: translateY(1px);
-  box-shadow: 0 8px 18px rgba(79, 70, 229, 0.7);
 }
 
 /* Secondary column */
@@ -459,5 +446,229 @@
 
   .cards {
     grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.cards {
+  margin-top: 0.6rem;
+  display: grid;
+  grid-template-columns: minmax(0, 1.8fr) minmax(0, 1.1fr);
+  gap: 1.2rem;
+}
+
+/* คอลัมน์ซ้าย: start game + history */
+.leftColumn {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+/* ปรับ card shadow ให้ตรง requirement ใหม่ */
+.primaryCard {
+  border-radius: 1rem;
+  padding: 1.4rem 1.5rem;
+  background: radial-gradient(circle at top left, #eef2ff, #ffffff);
+  border: 1px solid rgba(129, 140, 248, 0.35);
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.secondaryCard,
+.secondaryCardMuted {
+  border-radius: 0.9rem;
+  padding: 1rem 1.1rem;
+  border: 1px solid #e5e7eb;
+  background: #ffffff;
+}
+
+.secondaryCardMuted {
+  background: #f9fafb;
+}
+
+/* History overview card */
+
+.historyCard {
+  border-radius: 1rem;
+  padding: 1.2rem 1.4rem;
+  background: radial-gradient(circle at top left, #f5f3ff, #ffffff);
+  border: 1px solid rgba(165, 180, 252, 0.45);
+}
+
+.historyHeaderRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.8rem;
+}
+
+.historyTitle {
+  margin: 0;
+  font-size: 0.96rem;
+  font-weight: 600;
+  color: #111827;
+}
+
+.historySubtitle {
+  margin: 0.15rem 0 0;
+  font-size: 0.82rem;
+  color: #6b7280;
+}
+
+.historyScoreBadge {
+  padding: 0.25rem 0.8rem;
+  border-radius: 999px;
+  font-size: 0.8rem;
+  border: 1px solid rgba(129, 140, 248, 0.4);
+  background: rgba(129, 140, 248, 0.12);
+  color: #4338ca;
+  white-space: nowrap;
+}
+
+.historyScoreBadge span {
+  font-weight: 600;
+  margin-left: 0.25rem;
+}
+
+.historyStatsGrid {
+  margin-top: 0.8rem;
+  margin-bottom: 0.4rem;
+  display: grid;
+  grid-template-columns: minmax(0, 1.3fr) minmax(0, 1.1fr);
+  gap: 0.75rem;
+}
+
+.historyStatItem {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.historyStatLabel {
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #9ca3af;
+}
+
+.historyStatValue {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #111827;
+}
+
+.historyStatHint {
+  font-size: 0.78rem;
+  color: #6b7280;
+}
+
+.historyListHeader {
+  margin-top: 0.4rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.8rem;
+}
+
+.historyListTitle {
+  font-weight: 600;
+  color: #111827;
+}
+
+.historyListLink {
+  font-size: 0.78rem;
+  color: #6366f1;
+  text-decoration: none;
+}
+
+.historyListLink:hover {
+  text-decoration: underline;
+}
+
+.historyList {
+  list-style: none;
+  margin: 0.35rem 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.historyItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.82rem;
+}
+
+.historyResultChip {
+  min-width: 3.4rem;
+  padding: 0.16rem 0.6rem;
+  border-radius: 999px;
+  text-align: center;
+  font-weight: 500;
+}
+
+.historyResultWin {
+  background: rgba(34, 197, 94, 0.08);
+  color: #15803d;
+}
+
+.historyResultLoss {
+  background: rgba(248, 113, 113, 0.08);
+  color: #b91c1c;
+}
+
+.historyResultDraw {
+  background: rgba(148, 163, 184, 0.16);
+  color: #334155;
+}
+
+.historyDate {
+  flex: 1;
+  margin: 0 0.5rem;
+  color: #6b7280;
+}
+
+.historyScoreDelta {
+  font-variant-numeric: tabular-nums;
+  color: #4b5563;
+}
+
+.historyEmpty {
+  margin-top: 0.4rem;
+  font-size: 0.8rem;
+  color: #9ca3af;
+}
+
+/* avatar image extra class */
+
+.userAvatarImageWrapper {
+  width: 26px;
+  height: 26px;
+  border-radius: 999px;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.userAvatarImage {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* Responsive */
+
+@media (max-width: 900px) {
+  .cards {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .leftColumn {
+    order: 2;
+  }
+
+  .secondaryColumn {
+    order: 1;
   }
 }

@@ -5,6 +5,7 @@ import { CurrentUser } from '../auth/current-user.decorator';
 import { User } from '@prisma/client';
 
 @Controller(`users`)
+@UseGuards(SessionAuthGuard)
 export class UserController {
   constructor(private readonly userService: UserService) {}
 

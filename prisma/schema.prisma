@@ -5,7 +5,7 @@
 // Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
 
 generator client {
-  provider = "prisma-client"
+  provider = "prisma-client-js"
   // output       = "../libs/prisma/src/generated/prisma"
   // moduleFormat = "cjs"
 }
@@ -32,26 +32,80 @@ enum AuthProviderType {
   @@map("auth_provider_type")
 }
 
+enum TicTacToeResult {
+  WIN
+  LOSS
+  DRAW
+}
+
+enum TicTacToePlayer {
+  HUMAN // ฝั่งเรา
+  BOT // ฝั่งบอท
+}
+
+model TicTacToeStat {
+  id               String   @id @default(cuid()) @map("id")
+  userId           String   @unique @map("user_id")
+  score            Int      @default(0) @map("score")
+  currentWinStreak Int      @default(0) @map("current_win_streak")
+  totalWins        Int      @default(0) @map("total_wins")
+  totalLosses      Int      @default(0) @map("total_losses")
+  totalDraws       Int      @default(0) @map("total_draws")
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("tic_tac_toe_stats")
+}
+
 model User {
   id        String   @id @default(cuid()) @map("id")
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
-  // ข้อมูลพื้นฐาน
   email    String? @unique @map("email")
   name     String? @map("name")
   lastName String? @map("last_name")
   picture  String? @map("picture") @db.Text
 
-  // เอาไว้ future ใช้เก็บคะแนน
-  score           Int @default(0) @map("score")
-  consecutiveWins Int @default(0) @map("consecutive_wins")
-
   accounts    Account[]    @relation("UserAccounts")
   sessions    Session[]    @relation("UserSessions")
   loginAudits LoginAudit[] @relation("UserLoginAudits")
 
+  // เพิ่ม relation ไป stats / games
+  ticTacToeStat  TicTacToeStat?
+  ticTacToeGames TicTacToeGame[]
+
   @@map("users")
+}
+
+model TicTacToeGame {
+  id           String          @id @default(cuid()) @map("id")
+  userId       String          @map("user_id")
+  result       TicTacToeResult @map("result")
+  startingSide TicTacToePlayer @map("starting_side") // ใครเดินก่อน จาก coin toss
+  scoreDelta   Int             @default(0) @map("score_delta") // +1 / -1 / +2 (ตอนได้โบนัส)
+  createdAt    DateTime        @default(now()) @map("created_at")
+  finishedAt   DateTime?       @map("finished_at")
+
+  user  User            @relation(fields: [userId], references: [id])
+  moves TicTacToeMove[]
+
+  @@map("tic_tac_toe_games")
+}
+
+model TicTacToeMove {
+  id        String          @id @default(cuid()) @map("id")
+  gameId    String          @map("game_id")
+  moveOrder Int             @map("move_order") // 1,2,3,...
+  player    TicTacToePlayer @map("player") // HUMAN หรือ BOT
+  position  Int             @map("position") // 0-8 (ช่องบนกระดาน)
+  createdAt DateTime        @default(now()) @map("created_at")
+
+  game TicTacToeGame @relation(fields: [gameId], references: [id], onDelete: Cascade)
+
+  @@map("tic_tac_toe_moves")
 }
 
 model Account {

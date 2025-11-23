@@ -1,4 +1,5 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
+/* eslint-disable @typescript-eslint/no-explicit-any */
 'use client';
 
 import Link from 'next/link';
@@ -16,14 +17,31 @@ const menuItems = [
   {
     key: 'settings',
     label: 'Setting User',
-    href: '/dashboard/settings',
+    href: '/settings',
   },
   {
     key: 'history',
     label: 'History Games',
-    href: '/dashboard/history',
+    href: '/history',
   },
 ];
+
+type TicTacToeResult = 'WIN' | 'LOSS' | 'DRAW';
+
+type ServerStats = {
+  score: number;
+  currentWinStreak: number;
+  totalWins: number;
+  totalLosses: number;
+  totalDraws: number;
+};
+
+type GameHistoryItem = {
+  id: string;
+  createdAt: string;
+  result: TicTacToeResult;
+  scoreDelta: number;
+};
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL;
 
@@ -48,12 +66,45 @@ export default function DashboardPage() {
   const [userName, setUserName] = useState<string>('Player');
   const [userPicture, setUserPicture] = useState<string | null>(null);
 
+  // tictactoe overview
+  const [stats, setStats] = useState<ServerStats | null>(null);
+  const [recentGames, setRecentGames] = useState<GameHistoryItem[]>([]);
+  const [loadingOverview, setLoadingOverview] = useState(false);
+
   const isActive = (href: string) => {
     if (href === '/dashboard') {
       return pathname === '/dashboard';
     }
     return pathname === href;
   };
+
+  // ปิด popup เวลา click นอกกล่อง หรือกด Esc
+  useEffect(() => {
+    if (!isUserMenuOpen) return;
+
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        userAreaRef.current &&
+        !userAreaRef.current.contains(event.target as Node)
+      ) {
+        setIsUserMenuOpen(false);
+      }
+    };
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setIsUserMenuOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isUserMenuOpen]);
 
   // ดึงข้อมูลผู้ใช้
   useEffect(() => {
@@ -103,49 +154,76 @@ export default function DashboardPage() {
     };
   }, []);
 
-  // ปิด popup เวลา click นอกกล่อง หรือกด Esc
+  // ดึง stats + history overview
   useEffect(() => {
-    if (!isUserMenuOpen) return;
+    if (!API_BASE) return;
 
-    const handleClickOutside = (event: MouseEvent) => {
-      if (
-        userAreaRef.current &&
-        !userAreaRef.current.contains(event.target as Node)
-      ) {
-        setIsUserMenuOpen(false);
+    const fetchOverview = async () => {
+      try {
+        setLoadingOverview(true);
+
+        const [statsRes, gamesRes] = await Promise.all([
+          fetch(`${API_BASE}/api/v1/tictactoe/me`, {
+            credentials: 'include',
+          }),
+          fetch(`${API_BASE}/api/v1/tictactoe/games?limit=5`, {
+            credentials: 'include',
+          }),
+        ]);
+
+        if (statsRes.ok) {
+          const statsJson = await statsRes.json();
+          setStats(statsJson.response);
+        }
+
+        if (gamesRes.ok) {
+          const gamesJson = await gamesRes.json();
+          const games = (gamesJson.response ?? []) as any[];
+
+          setRecentGames(
+            games.map((g) => ({
+              id: g.id,
+              createdAt: g.createdAt,
+              result: g.result as TicTacToeResult,
+              scoreDelta: g.scoreDelta as number,
+            }))
+          );
+        }
+      } catch (e) {
+        console.error('Failed to load tictactoe overview', e);
+      } finally {
+        setLoadingOverview(false);
       }
     };
 
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') {
-        setIsUserMenuOpen(false);
-      }
-    };
-
-    document.addEventListener('mousedown', handleClickOutside);
-    document.addEventListener('keydown', handleKeyDown);
-
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-      document.removeEventListener('keydown', handleKeyDown);
-    };
-  }, [isUserMenuOpen]);
+    fetchOverview();
+  }, []);
 
   const handleLogout = async () => {
     try {
-      const url = API_BASE
-        ? `${API_BASE}/api/v1/auth/logout`
-        : '/api/v1/auth/logout';
-
-      await fetch(url, {
+      await fetch('/api/auth/logout', {
         method: 'POST',
         credentials: 'include',
       });
-    } catch (e) {
-      console.error('Logout failed', e);
     } finally {
       router.push('/auth');
     }
+  };
+
+  const formatResultLabel = (result: TicTacToeResult) => {
+    if (result === 'WIN') return 'Win';
+    if (result === 'LOSS') return 'Loss';
+    return 'Draw';
+  };
+
+  const formatDateShort = (iso: string) => {
+    const d = new Date(iso);
+    return d.toLocaleString('th-TH', {
+      day: '2-digit',
+      month: 'short',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
   };
 
   return (
@@ -203,20 +281,20 @@ export default function DashboardPage() {
                 className={styles.userChip}
                 onClick={() => setIsUserMenuOpen((prev) => !prev)}
               >
-                <span className={styles.userAvatar}>
-                  {userPicture ? (
-                    <Image
+                {userPicture ? (
+                  <span className={styles.userAvatarImageWrapper}>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
                       src={userPicture}
                       alt={userName}
-                      width={34}
-                      height={34}
                       className={styles.userAvatarImage}
-                      unoptimized
                     />
-                  ) : (
-                    userName.charAt(0).toUpperCase()
-                  )}
-                </span>
+                  </span>
+                ) : (
+                  <span className={styles.userAvatar}>
+                    {userName.charAt(0).toUpperCase()}
+                  </span>
+                )}
                 <span className={styles.userName}>{userName}</span>
                 <span className={styles.userChipCaret}>▾</span>
               </button>
@@ -258,16 +336,115 @@ export default function DashboardPage() {
             </div>
 
             <div className={styles.cards}>
-              <div className={styles.primaryCard}>
-                <h2 className={styles.cardTitle}>Start a new game</h2>
-                <p className={styles.cardDescription}>
-                  Play against our bot and collect points for each win.
-                </p>
-                <Link href="/games" className={styles.primaryButton}>
-                  Play Tic-Tac-Toe
-                </Link>
+              {/* LEFT COLUMN: start game + history overview */}
+              <div className={styles.leftColumn}>
+                <div className={styles.primaryCard}>
+                  <h2 className={styles.cardTitle}>Start a new game</h2>
+                  <p className={styles.cardDescription}>
+                    Play against our bot and collect points for each win.
+                  </p>
+                  <Link href="/games" className={styles.primaryButton}>
+                    Play Tic-Tac-Toe
+                  </Link>
+                </div>
+
+                <div className={styles.historyCard}>
+                  <div className={styles.historyHeaderRow}>
+                    <div>
+                      <h3 className={styles.historyTitle}>History overview</h3>
+                      <p className={styles.historySubtitle}>
+                        Quick glance at your points and recent games.
+                      </p>
+                    </div>
+                    {stats && (
+                      <div className={styles.historyScoreBadge}>
+                        Score <span>{stats.score}</span>
+                      </div>
+                    )}
+                  </div>
+
+                  {stats && (
+                    <div className={styles.historyStatsGrid}>
+                      <div className={styles.historyStatItem}>
+                        <span className={styles.historyStatLabel}>
+                          Current win streak
+                        </span>
+                        <span className={styles.historyStatValue}>
+                          {stats.currentWinStreak} win
+                          {stats.currentWinStreak === 1 ? '' : 's'}
+                        </span>
+                        <span className={styles.historyStatHint}>
+                          Bonus +1 point every 3 wins in a row.
+                        </span>
+                      </div>
+                      <div className={styles.historyStatItem}>
+                        <span className={styles.historyStatLabel}>
+                          Total W / L / D
+                        </span>
+                        <span className={styles.historyStatValue}>
+                          {stats.totalWins} / {stats.totalLosses} /{' '}
+                          {stats.totalDraws}
+                        </span>
+                        <span className={styles.historyStatHint}>
+                          Keep playing to climb the leaderboard.
+                        </span>
+                      </div>
+                    </div>
+                  )}
+
+                  <div className={styles.historyListHeader}>
+                    <span className={styles.historyListTitle}>
+                      Recent games
+                    </span>
+                    <Link
+                      href="/dashboard/history"
+                      className={styles.historyListLink}
+                    >
+                      View all
+                    </Link>
+                  </div>
+
+                  {loadingOverview && (
+                    <p className={styles.historyEmpty}>Loading overview…</p>
+                  )}
+
+                  {!loadingOverview && recentGames.length === 0 && (
+                    <p className={styles.historyEmpty}>
+                      Play your first game to see your history here.
+                    </p>
+                  )}
+
+                  {!loadingOverview && recentGames.length > 0 && (
+                    <ul className={styles.historyList}>
+                      {recentGames.map((g) => (
+                        <li key={g.id} className={styles.historyItem}>
+                          <span
+                            className={`${styles.historyResultChip} ${
+                              g.result === 'WIN'
+                                ? styles.historyResultWin
+                                : g.result === 'LOSS'
+                                ? styles.historyResultLoss
+                                : styles.historyResultDraw
+                            }`}
+                          >
+                            {formatResultLabel(g.result)}
+                          </span>
+                          <span className={styles.historyDate}>
+                            {formatDateShort(g.createdAt)}
+                          </span>
+                          <span className={styles.historyScoreDelta}>
+                            {g.scoreDelta > 0
+                              ? `+${g.scoreDelta}`
+                              : g.scoreDelta}
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
               </div>
 
+              {/* RIGHT COLUMN: quick links + tip */}
               <div className={styles.secondaryColumn}>
                 <div className={styles.secondaryCard}>
                   <h3 className={styles.secondaryTitle}>Quick links</h3>
