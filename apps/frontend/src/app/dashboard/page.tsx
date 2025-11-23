@@ -1,39 +1,84 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
+import Image from 'next/image';
+import { useEffect, useRef, useState } from 'react';
 import styles from './dashboard.module.scss';
 
 const menuItems = [
   {
     key: 'game',
     label: 'Tic-Tac-Toe Game',
-    href: '/dashbard',
+    href: '/dashboard/games',
   },
   {
     key: 'settings',
     label: 'Setting User',
-    href: '/dashbard/settings',
+    href: '/dashboard/settings',
   },
   {
     key: 'history',
     label: 'History Games',
-    href: '/dashbard/history',
+    href: '/dashboard/history',
   },
 ];
 
 export default function DashboardPage() {
   const pathname = usePathname();
+  const router = useRouter();
+
+  const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
+  const userAreaRef = useRef<HTMLDivElement | null>(null);
 
   const isActive = (href: string) => {
-    if (href === '/dashbard') {
-      return pathname === '/dashbard';
+    if (href === '/dashboard') {
+      return pathname === '/dashboard';
     }
     return pathname === href;
   };
 
-  // TODO: ตรงนี้ค่อยเปลี่ยนมาอ่านจาก session จริงทีหลัง
   const userName = 'Abdulloh Mukem';
+
+  // ปิด popup เวลา click นอกกล่อง หรือกด Esc
+  useEffect(() => {
+    if (!isUserMenuOpen) return;
+
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        userAreaRef.current &&
+        !userAreaRef.current.contains(event.target as Node)
+      ) {
+        setIsUserMenuOpen(false);
+      }
+    };
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setIsUserMenuOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isUserMenuOpen]);
+
+  const handleLogout = async () => {
+    try {
+      // TODO: ใส่ logic logout ของจริงที่นี่
+      // เช่น:
+      // localStorage.removeItem('access_token');
+      // await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' });
+    } finally {
+      // ปรับ path ให้ตรงกับหน้า login ของโปรเจกต์คุณ
+      router.push('/auth');
+    }
+  };
 
   return (
     <div className={styles.page}>
@@ -41,7 +86,14 @@ export default function DashboardPage() {
         {/* Sidebar */}
         <aside className={styles.sidebar}>
           <div className={styles.sidebarHeader}>
-            <span className={styles.sidebarLogoDot}>TTT</span>
+            <span className={styles.sidebarLogoDot}>
+              <Image
+                src="/icons/tic-tac-toe-icon.png"
+                alt="Tic-Tac-Toe Logo"
+                width={24}
+                height={24}
+              />
+            </span>
             <span className={styles.sidebarTitle}>Tic-Tac-Toe</span>
           </div>
 
@@ -69,12 +121,45 @@ export default function DashboardPage() {
               <span className={styles.brandText}>Tic-Tac-Toe Arena</span>
             </div>
 
-            <Link href="/dashbard/settings" className={styles.userChip}>
-              <span className={styles.userAvatar}>
-                {userName.charAt(0).toUpperCase()}
-              </span>
-              <span className={styles.userName}>{userName}</span>
-            </Link>
+            {/* user/profile dropdown */}
+            <div className={styles.userArea} ref={userAreaRef}>
+              <button
+                type="button"
+                className={styles.userChip}
+                onClick={() => setIsUserMenuOpen((prev) => !prev)}
+              >
+                <span className={styles.userAvatar}>
+                  {userName.charAt(0).toUpperCase()}
+                </span>
+                <span className={styles.userName}>{userName}</span>
+                <span className={styles.userChipCaret}>▾</span>
+              </button>
+
+              {isUserMenuOpen && (
+                <div className={styles.userMenu}>
+                  <button
+                    type="button"
+                    className={styles.userMenuItem}
+                    onClick={() => {
+                      setIsUserMenuOpen(false);
+                      router.push('/dashboard/settings');
+                    }}
+                  >
+                    Profile &amp; Settings
+                  </button>
+
+                  <div className={styles.userMenuDivider} />
+
+                  <button
+                    type="button"
+                    className={`${styles.userMenuItem} ${styles.userMenuItemDanger}`}
+                    onClick={handleLogout}
+                  >
+                    Logout
+                  </button>
+                </div>
+              )}
+            </div>
           </header>
 
           <section className={styles.content}>
@@ -92,7 +177,7 @@ export default function DashboardPage() {
                 <p className={styles.cardDescription}>
                   Play against our bot and collect points for each win.
                 </p>
-                <Link href="/dashbard" className={styles.primaryButton}>
+                <Link href="/dashboard/games" className={styles.primaryButton}>
                   Play Tic-Tac-Toe
                 </Link>
               </div>
@@ -102,17 +187,17 @@ export default function DashboardPage() {
                   <h3 className={styles.secondaryTitle}>Quick links</h3>
                   <ul className={styles.linkList}>
                     <li>
-                      <Link href="/dashbard/settings">
+                      <Link href="/dashboard/settings">
                         Update profile & avatar
                       </Link>
                     </li>
                     <li>
-                      <Link href="/dashbard/history">
+                      <Link href="/dashboard/history">
                         View your recent games
                       </Link>
                     </li>
                     <li>
-                      <Link href="/dashbard">Learn how scoring works</Link>
+                      <Link href="/dashboard">Learn how scoring works</Link>
                     </li>
                   </ul>
                 </div>
