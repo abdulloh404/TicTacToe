@@ -5,6 +5,7 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import styles from './settings.module.scss';
 import { AppShell } from '../components/AppShell';
+import { Toaster, toast } from 'react-hot-toast';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL;
 
@@ -72,6 +73,9 @@ export default function SettingsPage() {
   const [formName, setFormName] = useState('');
   const [formLastName, setFormLastName] = useState('');
 
+  // track provider being processed (connect / disconnect)
+  const [busyProvider, setBusyProvider] = useState<AuthProvider | null>(null);
+
   // Load initial settings
   useEffect(() => {
     const loadSettings = async () => {
@@ -84,6 +88,7 @@ export default function SettingsPage() {
 
         if (!res.ok) {
           console.error('Failed to load settings', res.status);
+          toast.error('Failed to load settings.');
           return;
         }
 
@@ -123,6 +128,7 @@ export default function SettingsPage() {
         );
       } catch (err) {
         console.error('Error loading settings', err);
+        toast.error('Unexpected error while loading settings.');
       } finally {
         setLoading(false);
       }
@@ -154,36 +160,32 @@ export default function SettingsPage() {
       if (!res.ok) {
         console.error('Failed to save profile', res.status);
         setProfileError('Unable to save profile.');
+        toast.error('Unable to save profile.');
         return;
       }
 
       const json = await res.json();
       const payload = json.response ?? json;
-      const updatedUser: UserProfile | undefined = payload.user;
 
-      if (updatedUser) {
+      // backend returns the user directly in `response`
+      const updatedUser = payload as UserProfile;
+
+      if (updatedUser && updatedUser.id) {
         setProfile(updatedUser);
         setFormName(updatedUser.name ?? '');
         setFormLastName(updatedUser.lastName ?? '');
+        toast.success('Profile updated successfully.');
+      } else {
+        // defensive fallback
+        toast.error('Profile updated, but response format was unexpected.');
       }
     } catch (err) {
       console.error('Error saving profile', err);
       setProfileError('An error occurred while saving your profile.');
+      toast.error('An error occurred while saving your profile.');
     } finally {
       setSavingProfile(false);
     }
-  };
-
-  // Start social linking flow (redirect to backend OAuth link)
-  const handleConnectProvider = (provider: AuthProvider) => {
-    const pathMap: Record<AuthProvider, string> = {
-      GOOGLE: '/api/v1/auth/google/link',
-      FACEBOOK: '/api/v1/auth/facebook/link',
-      LINE: '/api/v1/auth/line/link',
-    };
-
-    const href = apiUrl(pathMap[provider]);
-    window.location.href = href;
   };
 
   const isProviderLinked = (provider: AuthProvider) =>
@@ -191,6 +193,52 @@ export default function SettingsPage() {
 
   const getProviderAccount = (provider: AuthProvider) =>
     accounts.find((a) => a.provider === provider) ?? null;
+
+  // Toggle connect / disconnect
+  const handleToggleProvider = async (provider: AuthProvider) => {
+    const pathMap: Record<AuthProvider, string> = {
+      GOOGLE: '/api/v1/auth/google/link',
+      FACEBOOK: '/api/v1/auth/facebook/link',
+      LINE: '/api/v1/auth/line/link',
+    };
+
+    const linked = isProviderLinked(provider);
+
+    // not linked -> start OAuth link flow (redirect)
+    if (!linked) {
+      const href = apiUrl(pathMap[provider]);
+      window.location.href = href;
+      return;
+    }
+
+    try {
+      setBusyProvider(provider);
+
+      const res = await fetch(apiUrl(pathMap[provider]), {
+        method: 'DELETE',
+        credentials: 'include',
+      });
+
+      if (!res.ok) {
+        console.error('Failed to disconnect provider', res.status);
+        toast.error(
+          `Failed to disconnect ${providerDisplayName(provider)} account.`
+        );
+        return;
+      }
+
+      // remove from state
+      setAccounts((prev) => prev.filter((a) => a.provider !== provider));
+      toast.success(
+        `${providerDisplayName(provider)} account disconnected successfully.`
+      );
+    } catch (err) {
+      console.error('Error disconnecting provider', err);
+      toast.error('An error occurred while disconnecting account.');
+    } finally {
+      setBusyProvider(null);
+    }
+  };
 
   return (
     <AppShell>
@@ -333,23 +381,24 @@ export default function SettingsPage() {
                         </div>
 
                         <div className={styles.providerActions}>
-                          {linked ? (
-                            <button
-                              type="button"
-                              className={styles.secondaryButton}
-                              disabled
-                            >
-                              Linked
-                            </button>
-                          ) : (
-                            <button
-                              type="button"
-                              className={styles.primaryButtonGhost}
-                              onClick={() => handleConnectProvider(provider)}
-                            >
-                              Connect
-                            </button>
-                          )}
+                          <button
+                            type="button"
+                            className={
+                              linked
+                                ? styles.secondaryButton
+                                : styles.primaryButtonGhost
+                            }
+                            onClick={() => handleToggleProvider(provider)}
+                            disabled={busyProvider === provider}
+                          >
+                            {busyProvider === provider
+                              ? linked
+                                ? 'Disconnecting…'
+                                : 'Connecting…'
+                              : linked
+                              ? 'Disconnect'
+                              : 'Connect'}
+                          </button>
                         </div>
                       </li>
                     );
@@ -408,6 +457,9 @@ export default function SettingsPage() {
           </div>
         )}
       </section>
+
+      {/* Toast portal */}
+      <Toaster position="top-right" />
     </AppShell>
   );
 }

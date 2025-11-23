@@ -7,6 +7,7 @@ import {
   InternalServerErrorException,
   Post,
   Req,
+  UseGuards,
 } from '@nestjs/common';
 import { OAuthProviderName } from './types/auth.types';
 import { OAUTH_CONFIG, OAUTH_TO_PRISMA_PROVIDER } from './config/oauth.config';
@@ -14,6 +15,7 @@ import { Query, Param, Res } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { Request, Response } from 'express';
 import { SocialLinkService } from './socail-link.service';
+import { SessionAuthGuard } from '../auth/session-auth.guard';
 
 @Controller(`auth`)
 export class AuthController {
@@ -147,6 +149,7 @@ export class AuthController {
   }
 
   @Delete(':provider/link')
+  @UseGuards(SessionAuthGuard)
   async disconnect(
     @Param('provider') provider: OAuthProviderName,
     @Req() req: any
