@@ -1,5 +1,5 @@
-import Authenticate from './auth/auth';
+import AuthPage from './auth/page';
 
 export default function Page() {
-  return <Authenticate />;
+  return <AuthPage />;
 }

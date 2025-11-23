@@ -4,7 +4,7 @@ import { useState } from 'react';
 import styles from './auth.module.scss';
 import Image from 'next/image';
 
-export default function Authenticate() {
+export default function AuthPage() {
   const [loadingProvider, setLoadingProvider] = useState<string | null>(null);
 
   const API_BASE = process.env.NEXT_PUBLIC_API_URL;
