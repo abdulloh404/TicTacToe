@@ -30,8 +30,6 @@ type ServerStats = {
   totalDraws: number;
 };
 
-const MAX_MOVES = 9;
-
 const winningLines: number[][] = [
   [0, 1, 2],
   [3, 4, 5],
@@ -314,6 +312,40 @@ export default function GamesPage() {
     return () => clearTimeout(timeout);
   }, [status]);
 
+  const MAX_MOVES = 9;
+
+  // ทำ canonical moves: ไม่ให้ position ซ้ำ, จำกัด 0–8, จำกัดจำนวน และเซ็ต moveOrder + player ให้สลับกัน
+  function canonicalizeMoves(
+    rawMoves: MoveDto[],
+    startingPlayer: ServerPlayer | null
+  ): MoveDto[] {
+    if (!startingPlayer) return [];
+
+    const usedPositions = new Set<number>();
+    const uniqueMoves: MoveDto[] = [];
+
+    for (const m of rawMoves) {
+      if (m.position < 0 || m.position > 8) continue; // กัน position นอกบอร์ด
+      if (usedPositions.has(m.position)) continue; // กัน position ซ้ำ
+
+      usedPositions.add(m.position);
+      uniqueMoves.push(m);
+
+      if (uniqueMoves.length >= MAX_MOVES) break;
+    }
+
+    if (uniqueMoves.length === 0) return [];
+
+    const first = startingPlayer;
+    const second: ServerPlayer = startingPlayer === 'HUMAN' ? 'BOT' : 'HUMAN';
+
+    return uniqueMoves.map((m, idx) => ({
+      moveOrder: idx + 1,
+      position: m.position,
+      player: idx % 2 === 0 ? first : second, // 1,3,5,... = คนที่เริ่ม, 2,4,6,... = อีกฝั่ง
+    }));
+  }
+
   // เมื่อเกมจบ → ส่ง result + moves เข้า backend
   useEffect(() => {
     const isFinal = status === 'win' || status === 'lose' || status === 'draw';
@@ -322,23 +354,8 @@ export default function GamesPage() {
     if (!startingPlayer) return;
     if (!API_BASE) return;
 
-    // จำนวนช่องที่มี X/O บนกระดานจริง ๆ
-    const filledCount = board.filter((c) => c !== null).length;
-    if (filledCount === 0) return;
-
-    // จำกัดจำนวน moves ไม่เกินจำนวนช่องที่ถูกใช้จริง และไม่เกิน 9
-    const cleanedMoves: MoveDto[] = [];
-    for (const m of moves) {
-      if (m.position < 0 || m.position > 8) continue;
-      cleanedMoves.push(m);
-      if (
-        cleanedMoves.length >= filledCount ||
-        cleanedMoves.length >= MAX_MOVES
-      ) {
-        break;
-      }
-    }
-
+    // ทำความสะอาด moves: กัน position ซ้ำ, position นอก 0-8, จำกัดจำนวน และจัดลำดับ/ฝั่งให้ถูกต้อง
+    const cleanedMoves = canonicalizeMoves(moves, startingPlayer);
     if (cleanedMoves.length === 0) return;
 
     const mapResult = (s: GameStatus): ServerResult => {
@@ -381,7 +398,7 @@ export default function GamesPage() {
     };
 
     submit();
-  }, [status, startingPlayer, moves, board]);
+  }, [status, startingPlayer, moves]);
 
   const renderStatusText = () => {
     if (status === 'win') return 'You win!';
