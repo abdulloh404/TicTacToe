@@ -3,7 +3,7 @@ import { BadRequestException, Controller, Get } from '@nestjs/common';
 import { OAuthProviderName } from './types/auth.types';
 import { OAUTH_CONFIG } from './config/oauth.config';
 import { Query, Param, Res } from '@nestjs/common';
-import type { Response } from 'express';
+import { Response } from 'express';
 import { AuthService } from './auth.service';
 
 @Controller(`auth`)

@@ -8,5 +8,5 @@
     "**/tmp": false
   },
   "explorerExclude.backup": {},
-  "nxConsole.generateAiAgentRules": true
+  "js/ts.implicitProjectConfig.experimentalDecorators": true
 }

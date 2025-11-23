@@ -24,8 +24,8 @@
     "typeRoots": ["./node_modules/@types", "./types"],
     "paths": {
       "@tic-tac-toe/*": ["./libs/*/src/index"],
-      "@tic-tac-toe/constant": ["libs/constant/src/index.ts"],
-      "@tic-tac-toe/prisma": ["libs/prisma/src/index.ts"]
+      "@tic-tac-toe/constant": ["./libs/constant/src/index.ts"],
+      "@tic-tac-toe/prisma": ["./libs/prisma/src/index.ts"]
     }
   },
   "include": ["src/**/*.ts", "libs/**/**/*.ts"],
