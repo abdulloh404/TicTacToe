@@ -87,18 +87,26 @@ export class TicTacToeController {
   }
 
   /**
-   * ดึง history เกมของ user ปัจจุบัน (เอาไปโชว์หน้า History)
+   * ดึง history เกมของ user ปัจจุบัน (เอาไปโชว์หน้า History) + pagination
    */
   @Get('games')
-  async getMyGames(@CurrentUser() user: User, @Query('limit') limit?: string) {
-    const games = await this.service.getUserGames(
+  async getMyGames(
+    @CurrentUser() user: User,
+    @Query('page') page?: string,
+    @Query('pageSize') pageSize?: string
+  ) {
+    const pageNum = page ? Number(page) : 1;
+    const pageSizeNum = pageSize ? Number(pageSize) : 10;
+
+    const result = await this.service.getUserGames(
       user.id,
-      limit ? Number(limit) : 20
+      pageNum,
+      pageSizeNum
     );
 
     return {
       status: 'success',
-      response: games,
+      response: result,
     };
   }
 }

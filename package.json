@@ -81,5 +81,9 @@
   },
   "lint-staged": {
     "**/*.{ts,js, cjs,json,css,scss,md}": "prettier --write"
+  },
+  "_moduleAliases": {
+    "@tic-tac-toe/constants": "dist/libs/constants",
+    "@tic-tac-toe/prisma": "dist/libs/prisma"
   }
 }

@@ -141,16 +141,38 @@ export class TicTacToeService {
     });
   }
 
-  async getUserGames(userId: string, limit = 20) {
-    return this.prisma.ticTacToeGame.findMany({
-      where: { userId },
-      orderBy: { createdAt: 'desc' },
-      take: limit,
-      include: {
-        moves: {
-          orderBy: { moveOrder: 'asc' },
+  async getUserGames(userId: string, page = 1, pageSize = 10) {
+    const safePage = page < 1 ? 1 : page;
+    const safePageSize = Math.min(Math.max(pageSize, 1), 50); // กันไม่ให้ pageSize ใหญ่ไป
+    const skip = (safePage - 1) * safePageSize;
+
+    const [total, games] = await this.prisma.$transaction([
+      this.prisma.ticTacToeGame.count({
+        where: { userId },
+      }),
+      this.prisma.ticTacToeGame.findMany({
+        where: { userId },
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take: safePageSize,
+        include: {
+          moves: {
+            orderBy: { moveOrder: 'asc' },
+          },
         },
+      }),
+    ]);
+
+    const totalPages = total === 0 ? 1 : Math.ceil(total / safePageSize);
+
+    return {
+      items: games,
+      pagination: {
+        page: safePage,
+        pageSize: safePageSize,
+        totalItems: total,
+        totalPages,
       },
-    });
+    };
   }
 }

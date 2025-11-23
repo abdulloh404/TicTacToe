@@ -2,8 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import styles from './games.module.scss';
-import Link from 'next/link';
-import Image from 'next/image';
+import { AppShell } from '../components/AppShell';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL;
 
@@ -30,6 +29,8 @@ type ServerStats = {
   totalLosses: number;
   totalDraws: number;
 };
+
+const MAX_MOVES = 9;
 
 const winningLines: number[][] = [
   [0, 1, 2],
@@ -159,14 +160,20 @@ export default function GamesPage() {
     if (currentPlayer !== 'X') return;
     if (board[index] !== null) return;
 
+    // ใช้จำนวนช่องที่ลงไปแล้วเป็นตัวนับ move
+    const occupied = board.filter((c) => c !== null).length;
+    if (occupied >= MAX_MOVES) return; // กันไม่ให้เกิน 9 move
+
     const nextBoard = [...board];
     nextBoard[index] = 'X';
+
+    const nextMoveOrder = occupied + 1;
 
     // บันทึก move ของคน
     setMoves((prev) => [
       ...prev,
       {
-        moveOrder: prev.length + 1,
+        moveOrder: nextMoveOrder,
         player: 'HUMAN',
         position: index,
       },
@@ -204,6 +211,12 @@ export default function GamesPage() {
 
     const timeout = setTimeout(() => {
       setBoard((prevBoard) => {
+        // ใช้จำนวนช่องที่ถูกใช้ก่อนที่บอทจะเดิน
+        const occupied = prevBoard.filter((c) => c !== null).length;
+        if (occupied >= MAX_MOVES) {
+          return prevBoard;
+        }
+
         const index = chooseBotMove(prevBoard);
         if (index === null) {
           return prevBoard;
@@ -212,11 +225,13 @@ export default function GamesPage() {
         const nextBoard = [...prevBoard];
         nextBoard[index] = 'O';
 
+        const nextMoveOrder = occupied + 1;
+
         // บันทึก move ของบอท
         setMoves((prevMoves) => [
           ...prevMoves,
           {
-            moveOrder: prevMoves.length + 1,
+            moveOrder: nextMoveOrder,
             player: 'BOT',
             position: index,
           },
@@ -284,6 +299,7 @@ export default function GamesPage() {
   };
 
   // overlay Win / Lose / Draw
+  // overlay Win / Lose / Draw
   useEffect(() => {
     if (status === 'playing') {
       setShowResultOverlay(false);
@@ -305,7 +321,25 @@ export default function GamesPage() {
     if (!isFinal) return;
     if (!startingPlayer) return;
     if (!API_BASE) return;
-    if (moves.length === 0) return;
+
+    // จำนวนช่องที่มี X/O บนกระดานจริง ๆ
+    const filledCount = board.filter((c) => c !== null).length;
+    if (filledCount === 0) return;
+
+    // จำกัดจำนวน moves ไม่เกินจำนวนช่องที่ถูกใช้จริง และไม่เกิน 9
+    const cleanedMoves: MoveDto[] = [];
+    for (const m of moves) {
+      if (m.position < 0 || m.position > 8) continue;
+      cleanedMoves.push(m);
+      if (
+        cleanedMoves.length >= filledCount ||
+        cleanedMoves.length >= MAX_MOVES
+      ) {
+        break;
+      }
+    }
+
+    if (cleanedMoves.length === 0) return;
 
     const mapResult = (s: GameStatus): ServerResult => {
       if (s === 'win') return 'WIN';
@@ -326,7 +360,7 @@ export default function GamesPage() {
           body: JSON.stringify({
             result: mapResult(status),
             startingPlayer,
-            moves,
+            moves: cleanedMoves,
           }),
         });
 
@@ -337,7 +371,7 @@ export default function GamesPage() {
 
         const json = await res.json();
         if (json?.response?.stats) {
-          setServerStats(json.response.stats);
+          setServerStats(json.response.stats as ServerStats);
         }
       } catch (err) {
         console.error('Error recording game', err);
@@ -347,7 +381,7 @@ export default function GamesPage() {
     };
 
     submit();
-  }, [status, startingPlayer, moves]);
+  }, [status, startingPlayer, moves, board]);
 
   const renderStatusText = () => {
     if (status === 'win') return 'You win!';
@@ -360,7 +394,7 @@ export default function GamesPage() {
   };
 
   return (
-    <div className={styles.page}>
+    <AppShell>
       <div className={styles.shell}>
         {/* Coin flip overlay */}
         {coinPhase !== 'idle' && (
@@ -415,31 +449,7 @@ export default function GamesPage() {
           </div>
         )}
 
-        <header className={styles.header}>
-          <div className={styles.headerLeft}>
-            <div className={styles.logoMark}>
-              <Image
-                src="/icons/tic-tac-toe-icon.png"
-                alt="Tic-Tac-Toe Logo"
-                width={28}
-                height={28}
-              />
-            </div>
-            <div>
-              <h1 className={styles.title}>Tic-Tac-Toe Game</h1>
-              <p className={styles.subtitle}>
-                Play against our bot. X is you, O is the bot.
-              </p>
-            </div>
-          </div>
-
-          <div className={styles.headerRight}>
-            <Link href="/dashboard" className={styles.secondaryButton}>
-              ⬅ Back to dashboard
-            </Link>
-          </div>
-        </header>
-
+        {/* เนื้อหาเกม */}
         <main className={styles.main}>
           <section className={styles.boardSection}>
             <div className={styles.statusRow}>
@@ -559,6 +569,6 @@ export default function GamesPage() {
           </section>
         </main>
       </div>
-    </div>
+    </AppShell>
   );
 }
