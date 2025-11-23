@@ -37,9 +37,7 @@ async function bootstrap() {
   const port = process.env.BACKEND_PORT ?? '';
   await app.listen(port);
 
-  Logger.log(
-    `🚀 Application is running on: http://localhost:${port}/${API_PREFIX}`
-  );
+  Logger.log(`🚀 Application is running on: http://localhost:${port}`);
 }
 
 bootstrap();

@@ -263,7 +263,7 @@ export default function DashboardPage() {
                 <p className={styles.cardDescription}>
                   Play against our bot and collect points for each win.
                 </p>
-                <Link href="/dashboard/games" className={styles.primaryButton}>
+                <Link href="/games" className={styles.primaryButton}>
                   Play Tic-Tac-Toe
                 </Link>
               </div>

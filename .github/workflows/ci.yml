@@ -26,11 +26,12 @@ jobs:
       # - run: npx nx start-ci-run --distribute-on="3 linux-medium-js" --stop-agents-after="build"
 
       # Cache node_modules
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: 'npm'
+      # - uses: actions/setup-node@v4
+      #   with:
+      #     node-version: 22
+      #     cache: 'npm'
 
+      # - run: npm ci
       - run: npm ci
 
       # Prepend any command with "nx-cloud record --" to record its logs to Nx Cloud
@@ -38,4 +39,4 @@ jobs:
       # - run: npx nx run-many -t lint test build typecheck
       # Nx Cloud recommends fixes for failures to help you get CI green faster. Learn more: https://nx.dev/ci/features/self-healing-ci
       # - run: npx nx fix-ci
-        # if: always()
+      # if: always()
