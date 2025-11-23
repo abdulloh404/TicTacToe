@@ -1,5 +1,5 @@
+/* eslint-disable @typescript-eslint/no-non-null-assertion */
 /* eslint-disable @typescript-eslint/no-explicit-any */
-/* eslint-disable @typescript-eslint/no-unused-vars */
 import { OAuthProviderName } from './types/auth.types';
 import { PrismaService } from '@tic-tac-toe/prisma';
 import { randomBytes } from 'crypto';
@@ -16,7 +16,7 @@ import {
   FRONTEND_FALLBACK_REDIRECT,
   OAUTH_CONFIG,
 } from './config/oauth.config';
-import { AuthProvider, Prisma } from '@prisma/client';
+import { AuthProvider, AuthProviderType, Prisma } from '@prisma/client';
 import { SocialLinkService } from './socail-link.service';
 
 const providerToAuthProviderEnum: Record<OAuthProviderName, AuthProvider> = {
@@ -416,247 +416,265 @@ export class AuthService {
       expiresAt: tokenExpiresAtEpoch,
     } = params;
 
-    // map provider string → enum Prisma ที่เรานิยามใน schema
-    const authProviderEnumMap: Record<OAuthProviderName, string> = {
-      google: 'GOOGLE',
-      facebook: 'FACEBOOK',
-      line: 'LINE',
-      okta: 'OKTA',
-      auth0: 'AUTH0',
+    const authProviderEnumMap: Record<OAuthProviderName, AuthProvider> = {
+      google: AuthProvider.GOOGLE,
+      facebook: AuthProvider.FACEBOOK,
+      line: AuthProvider.LINE,
+      okta: AuthProvider.OKTA,
+      auth0: AuthProvider.AUTH0,
     };
 
-    const authProviderTypeEnumMap: Record<OAuthProviderName, string> = {
-      google: 'OAUTH2',
-      facebook: 'OAUTH2',
-      line: 'OAUTH2',
-      okta: 'OIDC',
-      auth0: 'OIDC',
-    };
+    const authProviderTypeEnumMap: Record<OAuthProviderName, AuthProviderType> =
+      {
+        google: AuthProviderType.OAUTH2,
+        facebook: AuthProviderType.OAUTH2,
+        line: AuthProviderType.OAUTH2,
+        okta: AuthProviderType.OIDC,
+        auth0: AuthProviderType.OIDC,
+      };
 
+    const prismaProvider = authProviderEnumMap[provider];
+    const prismaProviderType = authProviderTypeEnumMap[provider];
     const normalizedEmail = normalizedUserProfile.email ?? null;
 
     try {
-      // 1) หา account เดิมจาก provider + providerAccountId
-      const existingOAuthAccount = await this.prisma.account.findFirst({
+      // 1) ถ้าเจอ account เดิมจาก provider + providerAccountId แล้ว → ใช้ user เดิมเสมอ
+      const existingAccount = await this.prisma.account.findUnique({
         where: {
-          provider: authProviderEnumMap[provider] as any,
-          providerAccountId: normalizedUserProfile.providerAccountId,
+          provider_providerAccountId: {
+            provider: prismaProvider,
+            providerAccountId: normalizedUserProfile.providerAccountId,
+          },
         },
         include: { user: true },
       });
 
-      // 2) ถ้ามี account เดิม -> ดึง user จากนั้น
-      //    ถ้าไม่มี account แต่มี email -> หา user จาก email
-      let currentUser =
-        existingOAuthAccount?.user ??
-        (normalizedEmail
-          ? await this.prisma.user.findUnique({
-              where: { email: normalizedEmail },
-            })
-          : null);
+      let currentUser = existingAccount?.user ?? null;
 
-      // 3) ถ้ายังไม่เจอ user -> แยก create ตาม provider
-      if (!currentUser) {
-        switch (provider) {
-          case 'google': {
-            // ใช้ข้อมูลจาก Google โดยตรง + normalized
-            const googleEmail = normalizedEmail;
-            const googleGivenName =
-              rawUserProfile.given_name ??
-              rawUserProfile.givenName ??
-              normalizedUserProfile.name ??
-              googleEmail;
-
-            const googleFamilyName =
-              rawUserProfile.family_name ?? rawUserProfile.familyName ?? null;
-
-            const googleDisplayName =
-              normalizedUserProfile.name ??
-              ([googleGivenName, googleFamilyName].filter(Boolean).join(' ') ||
-                googleEmail);
-
-            const googlePictureUrl =
-              normalizedUserProfile.picture ?? rawUserProfile.picture ?? null;
-
-            currentUser = await this.prisma.user.create({
-              data: {
-                email: googleEmail,
-                name: googleGivenName ?? googleDisplayName,
-                lastName: googleFamilyName,
-                picture: googlePictureUrl,
-              },
-            });
-            break;
-          }
-
-          case 'facebook': {
-            // facebook บางเคสไม่มี email ถ้าไม่ได้ขอ permission
-            const facebookEmail = normalizedEmail;
-            const facebookName =
-              normalizedUserProfile.name ??
-              rawUserProfile.name ??
-              facebookEmail ??
-              `facebook:${normalizedUserProfile.providerAccountId}`;
-
-            const facebookPictureUrl =
-              normalizedUserProfile.picture ??
-              rawUserProfile.picture?.data?.url ??
-              null;
-
-            currentUser = await this.prisma.user.create({
-              data: {
-                email: facebookEmail,
-                name: facebookName,
-                lastName: null,
-                picture: facebookPictureUrl,
-              },
-            });
-            break;
-          }
-
-          case 'line': {
-            // LINE ส่วนใหญ่ไม่มี email → เน้น displayName + avatar
-            const lineDisplayName =
-              normalizedUserProfile.name ??
-              rawUserProfile.displayName ??
-              `LINE:${normalizedUserProfile.providerAccountId}`;
-
-            const linePictureUrl =
-              normalizedUserProfile.picture ??
-              rawUserProfile.pictureUrl ??
-              null;
-
-            currentUser = await this.prisma.user.create({
-              data: {
-                email: normalizedEmail, // ส่วนใหญ่จะเป็น null
-                name: lineDisplayName,
-                lastName: null,
-                picture: linePictureUrl,
-              },
-            });
-            break;
-          }
-
-          case 'okta': {
-            const oktaEmail = normalizedEmail ?? rawUserProfile.email ?? null;
-
-            const oktaName =
-              normalizedUserProfile.name ??
-              rawUserProfile.name ??
-              rawUserProfile.preferred_username ??
-              oktaEmail ??
-              `okta:${normalizedUserProfile.providerAccountId}`;
-
-            const oktaPictureUrl =
-              normalizedUserProfile.picture ?? rawUserProfile.picture ?? null;
-
-            currentUser = await this.prisma.user.create({
-              data: {
-                email: oktaEmail,
-                name: oktaName,
-                lastName: null,
-                picture: oktaPictureUrl,
-              },
-            });
-            break;
-          }
-
-          case 'auth0': {
-            const auth0Email = normalizedEmail ?? rawUserProfile.email ?? null;
-
-            const auth0Name =
-              normalizedUserProfile.name ??
-              rawUserProfile.name ??
-              rawUserProfile.nickname ??
-              auth0Email ??
-              `auth0:${normalizedUserProfile.providerAccountId}`;
-
-            const auth0PictureUrl =
-              normalizedUserProfile.picture ?? rawUserProfile.picture ?? null;
-
-            currentUser = await this.prisma.user.create({
-              data: {
-                email: auth0Email,
-                name: auth0Name,
-                lastName: null,
-                picture: auth0PictureUrl,
-              },
-            });
-            break;
-          }
-
-          default: {
-            // กันไว้เฉย ๆ ถ้า provider แปลก ๆ หลุดมา
-            const fallbackDisplayName =
-              normalizedUserProfile.name ??
-              normalizedEmail ??
-              `user:${normalizedUserProfile.providerAccountId}`;
-
-            currentUser = await this.prisma.user.create({
-              data: {
-                email: normalizedEmail,
-                name: fallbackDisplayName,
-                lastName: null,
-                picture: normalizedUserProfile.picture ?? null,
-              },
-            });
-            break;
-          }
-        }
-      } else {
-        // 4) มี user อยู่แล้ว -> อัปเดตชื่อ / รูป แบบ generic ก่อน
-        currentUser = await this.prisma.user.update({
-          where: { id: currentUser.id },
+      if (existingAccount && currentUser) {
+        // อัปเดต token ต่าง ๆ ได้ แต่ไม่แตะชื่อ / นามสกุล / อีเมล ของ user
+        await this.prisma.account.update({
+          where: {
+            provider_providerAccountId: {
+              provider: prismaProvider,
+              providerAccountId: normalizedUserProfile.providerAccountId,
+            },
+          },
           data: {
-            name: normalizedUserProfile.name ?? currentUser.name,
-            picture: normalizedUserProfile.picture ?? currentUser.picture,
+            email: normalizedEmail ?? existingAccount.email,
+            accessToken: providerAccessToken,
+            refreshToken: providerRefreshToken ?? existingAccount.refreshToken,
+            expiresAt: tokenExpiresAtEpoch ?? existingAccount.expiresAt,
+            rawProfileJson: JSON.stringify(rawUserProfile),
           },
         });
+
+        // เคสนี้จะครอบคลุมกรณี: login ด้วย Facebook1 แล้วได้ user เดียวกับที่เคย link ไว้กับ Google
+      } else {
+        // 2) ยังไม่มี account จาก provider+accountId นี้
+        //    ถ้า email ซ้ำ user เดิม → ผูก provider ใหม่เข้ากับ user นั้น
+        //    (แต่ไม่ overwrite โปรไฟล์เดิม)
+        if (!currentUser && normalizedEmail) {
+          currentUser = await this.prisma.user.findUnique({
+            where: { email: normalizedEmail },
+          });
+        }
+
+        if (currentUser) {
+          // มี user อยู่แล้ว → สร้าง Account แถวใหม่ของ provider นี้ให้ user เดิม
+          await this.prisma.account.create({
+            data: {
+              userId: currentUser.id,
+              provider: prismaProvider,
+              providerType: prismaProviderType,
+              providerAccountId: normalizedUserProfile.providerAccountId,
+              email: normalizedEmail,
+              accessToken: providerAccessToken,
+              refreshToken: providerRefreshToken,
+              expiresAt: tokenExpiresAtEpoch,
+              rawProfileJson: JSON.stringify(rawUserProfile),
+            },
+          });
+        } else {
+          // 3) เคส user ใหม่จริง ๆ → สร้าง user + account พร้อมกัน
+          switch (provider) {
+            case 'google': {
+              const googleEmail = normalizedEmail;
+              const googleGivenName =
+                rawUserProfile.given_name ??
+                rawUserProfile.givenName ??
+                normalizedUserProfile.name ??
+                googleEmail;
+
+              const googleFamilyName =
+                rawUserProfile.family_name ?? rawUserProfile.familyName ?? null;
+
+              const googleDisplayName =
+                normalizedUserProfile.name ??
+                ([googleGivenName, googleFamilyName]
+                  .filter(Boolean)
+                  .join(' ') ||
+                  googleEmail);
+
+              const googlePictureUrl =
+                normalizedUserProfile.picture ?? rawUserProfile.picture ?? null;
+
+              currentUser = await this.prisma.user.create({
+                data: {
+                  email: googleEmail,
+                  name: googleGivenName ?? googleDisplayName,
+                  lastName: googleFamilyName,
+                  picture: googlePictureUrl,
+                },
+              });
+              break;
+            }
+
+            case 'facebook': {
+              const facebookEmail = normalizedEmail;
+              const facebookName =
+                normalizedUserProfile.name ??
+                rawUserProfile.name ??
+                facebookEmail ??
+                `facebook:${normalizedUserProfile.providerAccountId}`;
+
+              const facebookPictureUrl =
+                normalizedUserProfile.picture ??
+                rawUserProfile.picture?.data?.url ??
+                null;
+
+              currentUser = await this.prisma.user.create({
+                data: {
+                  email: facebookEmail,
+                  name: facebookName,
+                  lastName: null,
+                  picture: facebookPictureUrl,
+                },
+              });
+              break;
+            }
+
+            case 'line': {
+              const lineDisplayName =
+                normalizedUserProfile.name ??
+                rawUserProfile.displayName ??
+                `LINE:${normalizedUserProfile.providerAccountId}`;
+
+              const linePictureUrl =
+                normalizedUserProfile.picture ??
+                rawUserProfile.pictureUrl ??
+                null;
+
+              currentUser = await this.prisma.user.create({
+                data: {
+                  email: normalizedEmail, // ส่วนใหญ่จะเป็น null
+                  name: lineDisplayName,
+                  lastName: null,
+                  picture: linePictureUrl,
+                },
+              });
+              break;
+            }
+
+            case 'okta': {
+              const oktaEmail = normalizedEmail ?? rawUserProfile.email ?? null;
+
+              const oktaName =
+                normalizedUserProfile.name ??
+                rawUserProfile.name ??
+                rawUserProfile.preferred_username ??
+                oktaEmail ??
+                `okta:${normalizedUserProfile.providerAccountId}`;
+
+              const oktaPictureUrl =
+                normalizedUserProfile.picture ?? rawUserProfile.picture ?? null;
+
+              currentUser = await this.prisma.user.create({
+                data: {
+                  email: oktaEmail,
+                  name: oktaName,
+                  lastName: null,
+                  picture: oktaPictureUrl,
+                },
+              });
+              break;
+            }
+
+            case 'auth0': {
+              const auth0Email =
+                normalizedEmail ?? rawUserProfile.email ?? null;
+
+              const auth0Name =
+                normalizedUserProfile.name ??
+                rawUserProfile.name ??
+                rawUserProfile.nickname ??
+                auth0Email ??
+                `auth0:${normalizedUserProfile.providerAccountId}`;
+
+              const auth0PictureUrl =
+                normalizedUserProfile.picture ?? rawUserProfile.picture ?? null;
+
+              currentUser = await this.prisma.user.create({
+                data: {
+                  email: auth0Email,
+                  name: auth0Name,
+                  lastName: null,
+                  picture: auth0PictureUrl,
+                },
+              });
+              break;
+            }
+
+            default: {
+              const fallbackDisplayName =
+                normalizedUserProfile.name ??
+                normalizedEmail ??
+                `user:${normalizedUserProfile.providerAccountId}`;
+
+              currentUser = await this.prisma.user.create({
+                data: {
+                  email: normalizedEmail,
+                  name: fallbackDisplayName,
+                  lastName: null,
+                  picture: normalizedUserProfile.picture ?? null,
+                },
+              });
+            }
+          }
+
+          // หลังสร้าง user ใหม่แล้ว → สร้าง account ให้ user คนนี้
+          await this.prisma.account.create({
+            data: {
+              userId: currentUser.id,
+              provider: prismaProvider,
+              providerType: prismaProviderType,
+              providerAccountId: normalizedUserProfile.providerAccountId,
+              email: normalizedEmail,
+              accessToken: providerAccessToken,
+              refreshToken: providerRefreshToken,
+              expiresAt: tokenExpiresAtEpoch,
+              rawProfileJson: JSON.stringify(rawUserProfile),
+            },
+          });
+        }
       }
 
-      // 5) upsert account (provider + providerAccountId ให้ unique)
-      await this.prisma.account.upsert({
-        where: {
-          provider_providerAccountId: {
-            provider: authProviderEnumMap[provider] as any,
-            providerAccountId: normalizedUserProfile.providerAccountId,
-          },
-        },
-        create: {
-          userId: currentUser.id,
-          provider: authProviderEnumMap[provider] as any,
-          providerType: authProviderTypeEnumMap[provider] as any,
-          providerAccountId: normalizedUserProfile.providerAccountId,
-          email: normalizedEmail,
-          accessToken: providerAccessToken,
-          refreshToken: providerRefreshToken,
-          expiresAt: tokenExpiresAtEpoch,
-          rawProfileJson: JSON.stringify(rawUserProfile),
-        },
-        update: {
-          email: normalizedEmail,
-          accessToken: providerAccessToken,
-          refreshToken: providerRefreshToken,
-          expiresAt: tokenExpiresAtEpoch,
-          rawProfileJson: JSON.stringify(rawUserProfile),
-        },
-      });
-
-      // 6) สร้าง session token สำหรับระบบของเราเอง
+      // 4) สร้าง session token ของระบบ
       const sessionTokenForApplication = randomBytes(32).toString('hex');
       const sessionExpiresAtDate = new Date();
-      sessionExpiresAtDate.setDate(sessionExpiresAtDate.getDate() + 7); // อายุ session 7 วัน
+      sessionExpiresAtDate.setDate(sessionExpiresAtDate.getDate() + 7);
 
       await this.prisma.session.create({
         data: {
           sessionToken: sessionTokenForApplication,
-          userId: currentUser.id,
+          userId: currentUser!.id,
           expiresAt: sessionExpiresAtDate,
         },
       });
 
-      return { user: currentUser, sessionToken: sessionTokenForApplication };
+      return { user: currentUser!, sessionToken: sessionTokenForApplication };
     } catch (error) {
+      // ถ้ามีปัญหาในการ persist user/account/session → โยน 500 พร้อมรายละเอียด
       throw new InternalServerErrorException({
         status: 'error',
         message: 'Failed to persist user/account/session',
