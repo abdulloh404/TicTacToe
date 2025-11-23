@@ -129,7 +129,13 @@ model Account {
 
   user User @relation("UserAccounts", fields: [userId], references: [id], onDelete: Cascade)
 
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime? @updatedAt @map("updated_at")
+
+  // 1 account จาก provider เดิมต่อ providerAccountId
   @@unique([provider, providerAccountId])
+  // บังคับ 1 user ต่อ 1 provider (Google 1, Facebook 1, LINE 1)
+  @@unique([userId, provider])
   @@index([userId])
   @@map("accounts")
 }

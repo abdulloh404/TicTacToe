@@ -1,0 +1,361 @@
+.content {
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: 2rem 1.5rem 3rem;
+}
+
+.headerRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+  margin-bottom: 1.75rem;
+}
+
+.heading {
+  font-size: 1.75rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  color: #111827;
+  margin: 0 0 0.25rem;
+}
+
+.subheading {
+  margin: 0;
+  font-size: 0.95rem;
+  color: #6b7280;
+  max-width: 640px;
+}
+
+.loadingBox {
+  margin-top: 1.5rem;
+  padding: 1.5rem;
+  border-radius: 1rem;
+  background: #f9fafb;
+  font-size: 0.95rem;
+  color: #6b7280;
+  border: 1px dashed #e5e7eb;
+}
+
+/* Layout grid */
+
+.grid {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1.6fr);
+  gap: 1.5rem;
+}
+
+@media (max-width: 960px) {
+  .grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* Card base */
+
+.card {
+  background: #ffffff;
+  border-radius: 1rem;
+  padding: 1.5rem 1.75rem;
+  border: 1px solid #e5e7eb;
+  box-shadow: 0 10px 25px rgba(15, 23, 42, 0.03);
+}
+
+.cardTitle {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #111827;
+  margin: 0 0 0.25rem;
+}
+
+.cardSubtitle {
+  margin: 0 0 1.25rem;
+  font-size: 0.9rem;
+  color: #6b7280;
+}
+
+/* Profile block */
+
+.profileHeader {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1.25rem;
+}
+
+.avatar {
+  width: 56px;
+  height: 56px;
+  border-radius: 999px;
+  background: radial-gradient(circle at 30% 20%, #ede9fe, #ddd6fe);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  font-size: 1.3rem;
+  color: #4b5563;
+  overflow: hidden;
+
+  img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+}
+
+.profileMeta {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.profileName {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #111827;
+}
+
+.profileEmail {
+  font-size: 0.9rem;
+  color: #6b7280;
+}
+
+/* Form */
+
+.form {
+  margin-top: 0.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+}
+
+.formRow {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.label {
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: #4b5563;
+}
+
+.input {
+  border-radius: 0.75rem;
+  border: 1px solid #e5e7eb;
+  padding: 0.55rem 0.75rem;
+  font-size: 0.95rem;
+  outline: none;
+  background: #f9fafb;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease,
+    background 0.15s ease;
+
+  &:focus {
+    border-color: #a855f7;
+    box-shadow: 0 0 0 1px rgba(168, 85, 247, 0.3);
+    background: #ffffff;
+  }
+}
+
+.errorText {
+  margin: 0.25rem 0 0;
+  font-size: 0.85rem;
+  color: #dc2626;
+}
+
+.formActions {
+  margin-top: 0.25rem;
+  display: flex;
+  justify-content: flex-end;
+}
+
+/* Buttons */
+
+.primaryButton {
+  border: none;
+  border-radius: 999px;
+  padding: 0.55rem 1.4rem;
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  background: linear-gradient(135deg, #a855f7, #6366f1);
+  color: #ffffff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.3rem;
+  box-shadow: 0 8px 20px rgba(129, 140, 248, 0.35);
+  transition: transform 0.1s ease, box-shadow 0.1s ease, filter 0.1s ease;
+
+  &:hover:not(:disabled) {
+    transform: translateY(-1px);
+    filter: brightness(1.03);
+    box-shadow: 0 10px 24px rgba(129, 140, 248, 0.4);
+  }
+
+  &:active:not(:disabled) {
+    transform: translateY(0);
+    box-shadow: 0 6px 16px rgba(129, 140, 248, 0.3);
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: default;
+    box-shadow: none;
+  }
+}
+
+.secondaryButton {
+  border-radius: 999px;
+  padding: 0.5rem 1.2rem;
+  font-size: 0.85rem;
+  font-weight: 500;
+  border: 1px solid #e5e7eb;
+  background: #f9fafb;
+  color: #6b7280;
+  cursor: default;
+}
+
+.primaryButtonGhost {
+  border-radius: 999px;
+  padding: 0.45rem 1.2rem;
+  font-size: 0.85rem;
+  font-weight: 500;
+  border: 1px solid rgba(168, 85, 247, 0.3);
+  background: rgba(250, 250, 255, 0.8);
+  color: #7c3aed;
+  cursor: pointer;
+  transition: background 0.1s ease, border-color 0.1s ease, transform 0.1s ease;
+
+  &:hover {
+    background: rgba(238, 242, 255, 0.9);
+    border-color: rgba(129, 140, 248, 0.7);
+    transform: translateY(-1px);
+  }
+
+  &:active {
+    transform: translateY(0);
+  }
+}
+
+/* Providers list */
+
+.providerList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-top: 0.5rem;
+}
+
+.providerItem {
+  padding: 0.75rem 0.25rem;
+  border-bottom: 1px dashed #e5e7eb;
+
+  &:last-child {
+    border-bottom: none;
+  }
+
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.providerInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.providerName {
+  font-size: 0.95rem;
+  font-weight: 500;
+  color: #111827;
+}
+
+.providerStatus {
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: #6b7280;
+}
+
+.providerEmail {
+  font-size: 0.8rem;
+  color: #4b5563;
+}
+
+.providerDate {
+  font-size: 0.8rem;
+  color: #9ca3af;
+}
+
+.providerActions {
+  flex-shrink: 0;
+}
+
+/* Sessions */
+
+.sessionTable {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 0.75rem;
+  font-size: 0.85rem;
+
+  th,
+  td {
+    padding: 0.5rem 0.25rem;
+    text-align: left;
+  }
+
+  th {
+    font-weight: 500;
+    color: #6b7280;
+    border-bottom: 1px solid #e5e7eb;
+    font-size: 0.8rem;
+  }
+
+  tbody tr:nth-child(even) {
+    background: #f9fafb;
+  }
+
+  tbody tr:hover {
+    background: #f3f4f6;
+  }
+}
+
+.currentBadge,
+.otherBadge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.2rem 0.6rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+.currentBadge {
+  background: rgba(34, 197, 94, 0.1);
+  color: #15803d;
+}
+
+.otherBadge {
+  background: rgba(148, 163, 184, 0.12);
+  color: #4b5563;
+}
+
+.sessionsFooter {
+  margin-top: 0.75rem;
+}
+
+/* Misc */
+
+.mutedText {
+  font-size: 0.85rem;
+  color: #9ca3af;
+}

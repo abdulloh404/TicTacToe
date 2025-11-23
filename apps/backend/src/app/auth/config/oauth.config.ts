@@ -1,4 +1,5 @@
 /* eslint-disable @typescript-eslint/no-non-null-assertion */
+import { AuthProvider } from '@prisma/client';
 import { OAuthProviderName } from '../types/auth.types';
 
 export interface OAuthProviderConfig {
@@ -58,5 +59,14 @@ export const OAUTH_CONFIG: Record<OAuthProviderName, OAuthProviderConfig> = {
     },
   },
 };
+
+export const OAUTH_TO_PRISMA_PROVIDER: Record<OAuthProviderName, AuthProvider> =
+  {
+    google: AuthProvider.GOOGLE,
+    facebook: AuthProvider.FACEBOOK,
+    line: AuthProvider.LINE,
+    okta: AuthProvider.OKTA,
+    auth0: AuthProvider.AUTH0,
+  };
 
 export const FRONTEND_FALLBACK_REDIRECT = FRONTEND_DEFAULT_REDIRECT;

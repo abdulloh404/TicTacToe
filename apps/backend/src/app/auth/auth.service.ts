@@ -10,16 +10,29 @@ import {
   HttpException,
   Injectable,
   InternalServerErrorException,
+  UnauthorizedException,
 } from '@nestjs/common';
 import {
   FRONTEND_FALLBACK_REDIRECT,
   OAUTH_CONFIG,
 } from './config/oauth.config';
-import { Prisma } from '@prisma/client';
+import { AuthProvider, Prisma } from '@prisma/client';
+import { SocialLinkService } from './socail-link.service';
+
+const providerToAuthProviderEnum: Record<OAuthProviderName, AuthProvider> = {
+  google: AuthProvider.GOOGLE,
+  facebook: AuthProvider.FACEBOOK,
+  line: AuthProvider.LINE,
+  okta: AuthProvider.OKTA,
+  auth0: AuthProvider.AUTH0,
+};
 
 @Injectable()
 export class AuthService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly socialLinkService: SocialLinkService
+  ) {}
 
   getRedirectUri(provider: OAuthProviderName) {
     const apiBaseUrlFromEnv = process.env.BACKEND_URL;
@@ -37,11 +50,12 @@ export class AuthService {
     return `${apiBaseUrlFromEnv}/api/v1/auth/${provider}/callback`;
   }
 
-  generateState(redirectUrl?: string) {
+  generateState(redirectUrl?: string, extra?: { mode?: 'login' | 'link' }) {
     const stateNonce = randomBytes(16).toString('hex');
     const statePayload = {
       nonce: stateNonce,
       redirectUrl: redirectUrl || FRONTEND_FALLBACK_REDIRECT,
+      mode: extra?.mode ?? 'login', // default = login
     };
 
     const encodedState = Buffer.from(JSON.stringify(statePayload)).toString(
@@ -99,14 +113,25 @@ export class AuthService {
     }
   }
 
-  verifyAndDecodeState(state: string, savedState?: string | null) {
-    // ถ้าไม่มี state เลย -> 400
+  verifyAndDecodeState(
+    state: string,
+    savedState?: string | null
+  ): { redirectUrl: string; mode: 'login' | 'link' } {
     if (!state) {
       throw new BadRequestException({
         status: 'error',
         message: 'Missing state',
         response: null,
         errors: ['state query param is required'],
+      });
+    }
+
+    if (savedState && state !== savedState) {
+      throw new BadRequestException({
+        status: 'error',
+        message: 'Invalid state',
+        response: null,
+        errors: ['state mismatch'],
       });
     }
 
@@ -118,13 +143,17 @@ export class AuthService {
       const parsedStatePayload = JSON.parse(decodedJsonString) as {
         nonce: string;
         redirectUrl?: string;
+        mode?: 'login' | 'link';
       };
 
-      // TODO: ถ้าจะเช็ค savedState (จาก cookie) กับ nonce จริง ๆ ทำตรงนี้ได้
+      const redirectUrl: string =
+        parsedStatePayload.redirectUrl ?? FRONTEND_FALLBACK_REDIRECT ?? '/';
 
-      return parsedStatePayload;
+      const mode: 'login' | 'link' =
+        parsedStatePayload.mode === 'link' ? 'link' : 'login';
+
+      return { redirectUrl, mode };
     } catch (error) {
-      // ถ้า decode / parse ไม่ได้ -> 400 พร้อม detail error
       throw new BadRequestException({
         status: 'error',
         message: 'Invalid state format',
@@ -177,11 +206,12 @@ export class AuthService {
     provider: OAuthProviderName;
     code: string;
     redirectUri: string;
-  }) {
-    const { provider, code, redirectUri } = params;
+    mode: 'login' | 'link';
+    currentSessionToken: string | null;
+  }): Promise<{ user: any | null; sessionToken: string | null }> {
+    const { provider, code, redirectUri, mode, currentSessionToken } = params;
     const providerConfig = OAUTH_CONFIG[provider];
 
-    // ถ้ารับ provider ที่ไม่รองรับ -> 400
     if (!providerConfig) {
       throw new BadRequestException({
         status: 'error',
@@ -191,7 +221,7 @@ export class AuthService {
       });
     }
 
-    // ---------- 1) แลก authorization code -> access token ----------
+    // 1) exchange code -> token
     let tokenResponseJson: any;
     let accessTokenFromProvider: string;
 
@@ -212,7 +242,6 @@ export class AuthService {
 
       if (!tokenEndpointResponse.ok) {
         const tokenEndpointErrorText = await tokenEndpointResponse.text();
-        // provider ตอบ error -> 502 (Bad Gateway) เพราะเป็น upstream ล้ม
         throw new BadGatewayException({
           status: 'error',
           message: 'Token exchange failed',
@@ -225,7 +254,6 @@ export class AuthService {
       accessTokenFromProvider = tokenResponseJson.access_token as string;
 
       if (!accessTokenFromProvider) {
-        // กรณีตอบ 200 แต่ไม่มี access_token ก็ถือว่า error จาก upstream เช่นกัน
         throw new BadGatewayException({
           status: 'error',
           message: 'Token exchange failed',
@@ -248,7 +276,7 @@ export class AuthService {
       });
     }
 
-    // ---------- 2) ใช้ access_token ดึง user profile ----------
+    // 2) ใช้ access_token ดึง user profile
     let rawUserProfileFromProvider: any;
 
     try {
@@ -287,16 +315,68 @@ export class AuthService {
       rawUserProfileFromProvider
     );
 
+    const refreshTokenFromProvider = tokenResponseJson.refresh_token as
+      | string
+      | undefined;
+    const expiresAtEpoch =
+      tokenResponseJson.expires_in &&
+      typeof tokenResponseJson.expires_in === 'number'
+        ? Math.floor(Date.now() / 1000) + tokenResponseJson.expires_in
+        : undefined;
+    const idToken = tokenResponseJson.id_token as string | undefined;
+    const scope = tokenResponseJson.scope as string | undefined;
+    const tokenType = tokenResponseJson.token_type as string | undefined;
+
+    // 3) LINK MODE
+    if (mode === 'link') {
+      if (!currentSessionToken) {
+        throw new UnauthorizedException('No active session to link');
+      }
+
+      const session = await this.prisma.session.findUnique({
+        where: { sessionToken: currentSessionToken },
+      });
+
+      if (!session) {
+        throw new UnauthorizedException('Invalid session');
+      }
+
+      await this.socialLinkService.linkProviderForUser({
+        userId: session.userId,
+        provider: providerToAuthProviderEnum[provider],
+        profile: {
+          providerAccountId: normalizedUserProfile.providerAccountId,
+          email: normalizedUserProfile.email ?? null,
+          name: normalizedUserProfile.name ?? null,
+          lastName: (normalizedUserProfile as any).lastName ?? null,
+          picture: normalizedUserProfile.picture ?? null,
+        },
+        tokens: {
+          accessToken: accessTokenFromProvider,
+          refreshToken: refreshTokenFromProvider ?? null,
+          idToken: idToken ?? null,
+          scope: scope ?? null,
+          tokenType: tokenType ?? null,
+          expiresAt: expiresAtEpoch ?? null,
+        },
+      });
+
+      const user = await this.prisma.user.findUnique({
+        where: { id: session.userId },
+      });
+
+      return { user, sessionToken: currentSessionToken };
+    }
+
+    // 4) LOGIN MODE (เหมือนเดิม)
     try {
       const { user, sessionToken } = await this.upsertUserAndCreateSession({
         provider,
         profile: normalizedUserProfile,
         rawProfile: rawUserProfileFromProvider,
         accessToken: accessTokenFromProvider,
-        refreshToken: tokenResponseJson.refresh_token as string | undefined,
-        expiresAt: tokenResponseJson.expires_in
-          ? Math.floor(Date.now() / 1000) + tokenResponseJson.expires_in
-          : undefined,
+        refreshToken: refreshTokenFromProvider,
+        expiresAt: expiresAtEpoch,
       });
 
       // ตรงนี้ยัง return user + sessionToken ดิบ ๆ ให้ controller ไปจัดการ redirect + cookie ต่อ
@@ -525,7 +605,6 @@ export class AuthService {
         }
       } else {
         // 4) มี user อยู่แล้ว -> อัปเดตชื่อ / รูป แบบ generic ก่อน
-        // ถ้ามึงอยากแยก provider ตอน update ด้วย ค่อยแตก switch ตรงนี้เพิ่มได้เหมือนกัน
         currentUser = await this.prisma.user.update({
           where: { id: currentUser.id },
           data: {

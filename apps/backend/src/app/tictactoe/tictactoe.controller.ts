@@ -12,7 +12,7 @@ import { TicTacToeService } from './tictactoe.service';
 import { SessionAuthGuard } from '../auth/session-auth.guard';
 import { CurrentUser } from '../auth/current-user.decorator';
 import { User } from '@prisma/client';
-import { CreateTicTacToeGameDto } from './interfaces/create-tictactoe-game.interface';
+import { CreateTicTacToeGameDto } from './interfaces/tictactoe-game.interface';
 
 @UseGuards(SessionAuthGuard)
 @Controller('tictactoe')

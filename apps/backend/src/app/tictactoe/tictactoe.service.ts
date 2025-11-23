@@ -4,7 +4,7 @@ import { PrismaService } from '@tic-tac-toe/prisma';
 import {
   CreateTicTacToeGameDto,
   TicTacToeResult,
-} from './interfaces/create-tictactoe-game.interface';
+} from './interfaces/tictactoe-game.interface';
 
 @Injectable()
 export class TicTacToeService {
