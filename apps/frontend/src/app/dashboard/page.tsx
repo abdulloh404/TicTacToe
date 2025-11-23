@@ -16,7 +16,7 @@ type ServerStats = {
   totalDraws: number;
 };
 
-type GameHistoryItem = {
+type RecentGame = {
   id: string;
   createdAt: string;
   result: TicTacToeResult;
@@ -27,45 +27,87 @@ const API_BASE = process.env.NEXT_PUBLIC_API_URL;
 
 export default function DashboardPage() {
   const [stats, setStats] = useState<ServerStats | null>(null);
-  const [recentGames, setRecentGames] = useState<GameHistoryItem[]>([]);
-  const [loadingOverview, setLoadingOverview] = useState(false);
+  const [recentGames, setRecentGames] = useState<RecentGame[]>([]);
+  const [loadingOverview, setLoadingOverview] = useState<boolean>(true);
 
   useEffect(() => {
-    if (!API_BASE) return;
-
     const fetchOverview = async () => {
       try {
         setLoadingOverview(true);
 
-        const [statsRes, gamesRes] = await Promise.all([
-          fetch(`${API_BASE}/api/v1/tictactoe/me`, {
-            credentials: 'include',
-          }),
-          fetch(`${API_BASE}/api/v1/tictactoe/games?limit=5`, {
-            credentials: 'include',
-          }),
-        ]);
+        // ดึง stats จาก /me
+        try {
+          const statsUrl = API_BASE
+            ? `${API_BASE}/api/v1/tictactoe/me`
+            : '/api/v1/tictactoe/me';
 
-        if (statsRes.ok) {
-          const statsJson = await statsRes.json();
-          setStats(statsJson.response);
+          const resStats = await fetch(statsUrl, { credentials: 'include' });
+
+          if (resStats.ok) {
+            const json = await resStats.json();
+            // backend: { status, response: { score, currentWinStreak, ... } }
+            const payload = json.response ?? json;
+            setStats(payload as ServerStats);
+          } else {
+            console.error('Stats request failed', resStats.status);
+            setStats(null);
+          }
+        } catch (err) {
+          console.error('Failed to load tictactoe stats', err);
+          setStats(null);
         }
 
-        if (gamesRes.ok) {
-          const gamesJson = await gamesRes.json();
-          const games = (gamesJson.response ?? []) as any[];
+        // ดึง recent games จาก /games
+        try {
+          const gamesUrl = API_BASE
+            ? `${API_BASE}/api/v1/tictactoe/games?page=1&pageSize=5`
+            : '/api/v1/tictactoe/games?page=1&pageSize=5';
 
-          setRecentGames(
-            games.map((g) => ({
-              id: g.id,
-              createdAt: g.createdAt,
-              result: g.result as TicTacToeResult,
-              scoreDelta: g.scoreDelta as number,
-            }))
-          );
+          const resGames = await fetch(gamesUrl, {
+            credentials: 'include',
+          });
+
+          if (!resGames.ok) {
+            console.error('Games request failed', resGames.status);
+            setRecentGames([]);
+          } else {
+            const json = await resGames.json();
+            // จากตัวอย่าง: { status, response: { items: [...], pagination: {...} } }
+            const payload = json.response ?? json;
+            const items: any[] = Array.isArray(payload.items)
+              ? payload.items
+              : [];
+
+            const mapped: RecentGame[] = items.map((g) => {
+              const createdAt =
+                g.createdAt ??
+                g.created_at ??
+                g.finishedAt ??
+                g.finished_at ??
+                new Date().toISOString();
+
+              const scoreDelta =
+                typeof g.scoreDelta === 'number'
+                  ? g.scoreDelta
+                  : typeof g.score_delta === 'number'
+                  ? g.score_delta
+                  : 0;
+
+              return {
+                id: String(g.id),
+                createdAt,
+                result: g.result as TicTacToeResult,
+                scoreDelta,
+              };
+            });
+
+            // เอา 5 เกมล่าสุดพอ
+            setRecentGames(mapped.slice(0, 5));
+          }
+        } catch (err) {
+          console.error('Failed to load tictactoe games', err);
+          setRecentGames([]);
         }
-      } catch (e) {
-        console.error('Failed to load tictactoe overview', e);
       } finally {
         setLoadingOverview(false);
       }
@@ -133,7 +175,7 @@ export default function DashboardPage() {
                 <div className={styles.historyStatsGrid}>
                   <div className={styles.historyStatItem}>
                     <span className={styles.historyStatLabel}>
-                      Current win streak
+                      CURRENT WIN STREAK
                     </span>
                     <span className={styles.historyStatValue}>
                       {stats.currentWinStreak} win
@@ -145,7 +187,7 @@ export default function DashboardPage() {
                   </div>
                   <div className={styles.historyStatItem}>
                     <span className={styles.historyStatLabel}>
-                      Total W / L / D
+                      TOTAL W / L / D
                     </span>
                     <span className={styles.historyStatValue}>
                       {stats.totalWins} / {stats.totalLosses} /{' '}
@@ -209,7 +251,7 @@ export default function DashboardPage() {
               <h3 className={styles.secondaryTitle}>Quick links</h3>
               <ul className={styles.linkList}>
                 <li>
-                  <Link href="/settings">Update profile & avatar</Link>
+                  <Link href="/settings">Update profile &amp; avatar</Link>
                 </li>
                 <li>
                   <Link href="/history">View your recent games</Link>
