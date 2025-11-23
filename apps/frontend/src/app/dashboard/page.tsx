@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 'use client';
 
 import Link from 'next/link';
@@ -8,9 +9,9 @@ import styles from './dashboard.module.scss';
 
 const menuItems = [
   {
-    key: 'game',
-    label: 'Tic-Tac-Toe Game',
-    href: '/dashboard/games',
+    key: 'dashboard',
+    label: 'Dashboard',
+    href: '/dashboard',
   },
   {
     key: 'settings',
@@ -24,12 +25,28 @@ const menuItems = [
   },
 ];
 
+const API_BASE = process.env.NEXT_PUBLIC_API_URL;
+
+type MeResponse = {
+  status: string;
+  data?: {
+    id: string;
+    email?: string | null;
+    name?: string | null;
+    lastName?: string | null;
+    picture?: string | null;
+  };
+};
+
 export default function DashboardPage() {
   const pathname = usePathname();
   const router = useRouter();
 
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const userAreaRef = useRef<HTMLDivElement | null>(null);
+
+  const [userName, setUserName] = useState<string>('Player');
+  const [userPicture, setUserPicture] = useState<string | null>(null);
 
   const isActive = (href: string) => {
     if (href === '/dashboard') {
@@ -38,7 +55,53 @@ export default function DashboardPage() {
     return pathname === href;
   };
 
-  const userName = 'Abdulloh Mukem';
+  // ดึงข้อมูลผู้ใช้
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadMe = async () => {
+      try {
+        const url = API_BASE
+          ? `${API_BASE}/api/v1/users/me`
+          : '/api/v1/users/me';
+
+        const res = await fetch(url, {
+          credentials: 'include',
+        });
+
+        if (!res.ok) {
+          throw new Error('Failed to fetch user info');
+        }
+
+        const json = (await res.json()) as MeResponse;
+
+        if (cancelled || !json.data) return;
+
+        const { name, lastName, email, picture } = json.data;
+
+        // ถ้า provider มี lastName ก็เอามาต่อกัน
+        const fullName =
+          (lastName ? [name, lastName].filter(Boolean).join(' ') : name) ||
+          email ||
+          'Player';
+
+        setUserName(fullName);
+        setUserPicture(picture ?? null);
+      } catch (error) {
+        if (!cancelled) {
+          // fallback ถ้าดึงไม่ได้ก็ยังให้มีชื่อ default อยู่
+          setUserName('Player');
+          setUserPicture(null);
+        }
+      }
+    };
+
+    loadMe();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   // ปิด popup เวลา click นอกกล่อง หรือกด Esc
   useEffect(() => {
@@ -70,12 +133,17 @@ export default function DashboardPage() {
 
   const handleLogout = async () => {
     try {
-      // TODO: ใส่ logic logout ของจริงที่นี่
-      // เช่น:
-      // localStorage.removeItem('access_token');
-      // await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' });
+      const url = API_BASE
+        ? `${API_BASE}/api/v1/auth/logout`
+        : '/api/v1/auth/logout';
+
+      await fetch(url, {
+        method: 'POST',
+        credentials: 'include',
+      });
+    } catch (e) {
+      console.error('Logout failed', e);
     } finally {
-      // ปรับ path ให้ตรงกับหน้า login ของโปรเจกต์คุณ
       router.push('/auth');
     }
   };
@@ -90,8 +158,8 @@ export default function DashboardPage() {
               <Image
                 src="/icons/tic-tac-toe-icon.png"
                 alt="Tic-Tac-Toe Logo"
-                width={24}
-                height={24}
+                width={34}
+                height={34}
               />
             </span>
             <span className={styles.sidebarTitle}>Tic-Tac-Toe</span>
@@ -117,7 +185,14 @@ export default function DashboardPage() {
         <main className={styles.main}>
           <header className={styles.navbar}>
             <div className={styles.brand}>
-              <span className={styles.brandMark}>XO</span>
+              <span className={styles.brandMark}>
+                <Image
+                  src="/icons/tic-tac-toe-icon.png"
+                  alt="Tic-Tac-Toe Logo"
+                  width={34}
+                  height={34}
+                />
+              </span>
               <span className={styles.brandText}>Tic-Tac-Toe Arena</span>
             </div>
 
@@ -129,7 +204,18 @@ export default function DashboardPage() {
                 onClick={() => setIsUserMenuOpen((prev) => !prev)}
               >
                 <span className={styles.userAvatar}>
-                  {userName.charAt(0).toUpperCase()}
+                  {userPicture ? (
+                    <Image
+                      src={userPicture}
+                      alt={userName}
+                      width={34}
+                      height={34}
+                      className={styles.userAvatarImage}
+                      unoptimized
+                    />
+                  ) : (
+                    userName.charAt(0).toUpperCase()
+                  )}
                 </span>
                 <span className={styles.userName}>{userName}</span>
                 <span className={styles.userChipCaret}>▾</span>

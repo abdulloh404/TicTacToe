@@ -41,7 +41,7 @@ model User {
   email    String? @unique @map("email")
   name     String? @map("name")
   lastName String? @map("last_name")
-  picture  String? @db.Text @map("picture") 
+  picture  String? @map("picture") @db.Text
 
   // เอาไว้ future ใช้เก็บคะแนน
   score           Int @default(0) @map("score")

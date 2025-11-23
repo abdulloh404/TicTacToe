@@ -1,10 +1,16 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { BadRequestException, Controller, Get } from '@nestjs/common';
+import {
+  BadRequestException,
+  Controller,
+  Get,
+  Post,
+  Req,
+} from '@nestjs/common';
 import { OAuthProviderName } from './types/auth.types';
 import { OAUTH_CONFIG } from './config/oauth.config';
 import { Query, Param, Res } from '@nestjs/common';
-import { Response } from 'express';
 import { AuthService } from './auth.service';
+import { Request, Response } from 'express';
 
 @Controller(`auth`)
 export class AuthController {
@@ -72,5 +78,40 @@ export class AuthController {
     });
 
     return res.redirect(redirectUrl ?? '/');
+  }
+
+  @Post('logout')
+  async logout(@Req() req: Request, @Res() res: Response) {
+    const cookies = (req as any).cookies ?? {};
+
+    const sessionTokenFromCookie =
+      (cookies['session_token'] as string | undefined) ?? null;
+
+    const rawHeaderToken = req.headers['x-session-token'];
+    const sessionTokenFromHeader = Array.isArray(rawHeaderToken)
+      ? rawHeaderToken[0]
+      : rawHeaderToken || null;
+
+    const sessionToken = sessionTokenFromCookie ?? sessionTokenFromHeader;
+
+    if (sessionToken) {
+      await this.authService.logoutBySessionToken(sessionToken);
+    }
+
+    res.clearCookie('oauth_state', {
+      httpOnly: true,
+      sameSite: 'lax',
+      secure: false,
+      path: '/',
+    });
+
+    res.clearCookie('session_token', {
+      httpOnly: true,
+      sameSite: 'lax',
+      secure: false,
+      path: '/',
+    });
+
+    return res.send(); // 200/204 ก็ได้
   }
 }

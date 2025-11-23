@@ -15,6 +15,7 @@ import {
   FRONTEND_FALLBACK_REDIRECT,
   OAUTH_CONFIG,
 } from './config/oauth.config';
+import { Prisma } from '@prisma/client';
 
 @Injectable()
 export class AuthService {
@@ -580,6 +581,29 @@ export class AuthService {
       throw new InternalServerErrorException({
         status: 'error',
         message: 'Failed to persist user/account/session',
+        response: null,
+        errors: [error],
+      });
+    }
+  }
+
+  async logoutBySessionToken(sessionToken: string): Promise<void> {
+    if (!sessionToken) return;
+
+    try {
+      await this.prisma.session.delete({
+        where: { sessionToken },
+      });
+    } catch (error) {
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === 'P2025'
+      ) {
+        return;
+      }
+      throw new InternalServerErrorException({
+        status: 'error',
+        message: 'Failed to delete session',
         response: null,
         errors: [error],
       });
