@@ -109,7 +109,7 @@ export function AppShell({ children }: AppShellProps) {
         const json = (await res.json()) as MeResponse;
         if (cancelled || !json.data) return;
 
-        const { name, lastName, email, picture } = json.data;
+        const { name, lastName, email } = json.data;
 
         const fullName =
           (lastName ? [name, lastName].filter(Boolean).join(' ') : name) ||
@@ -117,7 +117,13 @@ export function AppShell({ children }: AppShellProps) {
           'Player';
 
         setUserName(fullName);
-        setUserPicture(picture ?? null);
+
+        // ใช้ avatar จาก backend proxy (cache 1 วัน)
+        const avatarUrl = API_BASE
+          ? `${API_BASE}/api/v1/users/me/avatar`
+          : '/api/v1/users/me/avatar';
+
+        setUserPicture(avatarUrl);
       } catch {
         if (!cancelled) {
           setUserName('Player');
@@ -206,6 +212,10 @@ export function AppShell({ children }: AppShellProps) {
                       src={userPicture}
                       alt={userName}
                       className={styles.userAvatarImage}
+                      onError={() => {
+                        // ให้ fallback เป็นตัวอักษรแทน
+                        setUserPicture(null);
+                      }}
                     />
                   </span>
                 ) : (
